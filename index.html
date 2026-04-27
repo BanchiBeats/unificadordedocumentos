@@ -28,6 +28,10 @@
 
         .drag-over { background-color: #eff6ff !important; border-color: #3b82f6 !important; }
         .sortable-ghost { opacity: 0.4; background-color: #f8fafc; }
+        .sortable-chosen { box-shadow: 0 10px 25px rgba(15, 23, 42, 0.18); }
+
+        .pro-header { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #2563eb 100%); }
+        .glass-badge { background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.24); }
         
         /* Loading Spinner */
         .loader {
@@ -54,15 +58,15 @@
 <body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col font-sans">
 
     <!-- Header -->
-    <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
+    <header class="pro-header shadow-xl sticky top-0 z-10">
         <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
             <div class="flex items-center gap-3">
-                <div class="bg-blue-600 text-white p-2 rounded-lg">
+                <div class="bg-white/15 text-white p-2 rounded-lg border border-white/20">
                     <i class="fa-solid fa-layer-group text-xl"></i>
                 </div>
-                <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Unificador de Documentos</h1>
+                <h1 class="text-2xl font-bold text-white tracking-tight">Unificador de Documentos</h1>
             </div>
-            <div class="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full flex items-center gap-2">
+            <div class="text-sm font-medium text-white glass-badge px-3 py-1.5 rounded-full flex items-center gap-2 backdrop-blur-sm">
                 <i class="fa-regular fa-file-pdf"></i>
                 <span id="totalPagesBadge">0 páginas estimadas</span>
             </div>
@@ -73,36 +77,36 @@
     <main class="flex-grow max-w-6xl mx-auto w-full px-4 py-8 flex flex-col gap-6">
         
         <!-- Dropzone -->
-        <div id="dropZone" class="border-3 border-dashed border-gray-300 bg-white rounded-2xl p-10 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 group min-h-[250px] shadow-sm">
-            <input type="file" id="fileInput" class="hidden" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx">
+        <div id="dropZone" class="border-2 border-dashed border-slate-300 bg-white rounded-2xl p-10 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 group min-h-[250px] shadow-lg shadow-slate-200/60">
+            <input type="file" id="fileInput" class="hidden" multiple accept=".jpg,.jpeg,.png,.pdf,.docx,.xlsx">
             <div class="bg-blue-100 text-blue-600 w-16 h-16 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <i class="fa-solid fa-cloud-arrow-up text-3xl"></i>
             </div>
             <h3 class="text-xl font-semibold text-gray-700 mb-2">Arrastra y suelta tus archivos aquí</h3>
-            <p class="text-gray-500 mb-4 max-w-md">Soporta JPG, PNG, PDF, Word (.docx) y Excel (.xlsx). También puedes presionar <kbd class="bg-gray-100 border border-gray-300 px-2 py-1 rounded text-xs text-gray-600 font-mono">CTRL+V</kbd> para pegar imágenes.</p>
+            <p class="text-gray-500 mb-4 max-w-md">Soporta JPG, PNG, PDF, Word (.docx) y Excel (.xlsx). No se admite .doc o .xls legados. También puedes presionar <kbd class="bg-gray-100 border border-gray-300 px-2 py-1 rounded text-xs text-gray-600 font-mono">CTRL+V</kbd> para pegar imágenes.</p>
             <button class="bg-white border border-gray-300 text-gray-700 px-6 py-2 rounded-lg shadow-sm hover:bg-gray-50 font-medium transition-colors">
                 Examinar archivos
             </button>
         </div>
 
         <!-- Toolbar & Actions -->
-        <div class="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-200" id="actionToolbar" style="display: none;">
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white/95 p-4 rounded-xl shadow-lg shadow-slate-200/70 border border-slate-200" id="actionToolbar" style="display: none;">
             <div class="flex items-center gap-2 text-sm text-gray-600 font-medium">
                 <i class="fa-solid fa-list-ol"></i>
                 <span id="fileCountText">0 archivos agregados</span>
             </div>
             <div class="flex gap-3 w-full sm:w-auto">
-                <button onclick="clearAllFiles()" class="flex-1 sm:flex-none px-4 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                <button id="clearAllBtn" onclick="clearAllFiles()" class="flex-1 sm:flex-none px-4 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg font-medium transition-colors flex items-center justify-center gap-2" aria-label="Limpiar todos los archivos">
                     <i class="fa-regular fa-trash-can"></i> Limpiar Todo
                 </button>
-                <button onclick="generateFinalPDF()" class="flex-1 sm:flex-none px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-md transition-all flex items-center justify-center gap-2 transform active:scale-95">
+                <button id="generateBtn" onclick="generateFinalPDF()" class="flex-1 sm:flex-none px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-md transition-all flex items-center justify-center gap-2 transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Generar PDF final">
                     <i class="fa-solid fa-wand-magic-sparkles"></i> Generar PDF
                 </button>
             </div>
         </div>
 
         <!-- File List -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex-grow flex flex-col">
+        <div class="bg-white rounded-xl shadow-lg shadow-slate-200/70 border border-slate-200 overflow-hidden flex-grow flex flex-col">
             <div class="bg-gray-50 border-b border-gray-200 px-4 py-3 flex text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 <div class="w-10 text-center">Orden</div>
                 <div class="flex-grow pl-4">Documento</div>
@@ -136,6 +140,9 @@
                 <span id="progressText">0%</span>
                 <span id="progressStep">Iniciando...</span>
             </div>
+            <button id="cancelProcessBtn" class="mt-6 text-sm text-gray-600 hover:text-red-600 transition-colors" type="button">
+                Cancelar proceso
+            </button>
         </div>
     </div>
 
@@ -153,6 +160,14 @@
         let filesData = [];
         let fileIdCounter = 0;
         let sortableInstance = null;
+        let isProcessing = false;
+
+        const APP_CONFIG = {
+            MAX_FILES: 80,
+            MAX_TOTAL_SIZE_MB: 200,
+            MAX_FILE_SIZE_MB: 50,
+            SUPPORTED_EXTENSIONS: ['.jpg', '.jpeg', '.png', '.pdf', '.docx', '.xlsx']
+        };
 
         // --- DOM Elements ---
         const dropZone = document.getElementById('dropZone');
@@ -182,17 +197,29 @@
             dropZone.addEventListener('drop', handleDrop, false);
             dropZone.addEventListener('click', () => fileInput.click());
             fileInput.addEventListener('change', handleFileSelect);
+            document.getElementById('cancelProcessBtn').addEventListener('click', cancelGeneration);
+
+            // Accessibility keyboard support
+            dropZone.setAttribute('tabindex', '0');
+            dropZone.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    fileInput.click();
+                }
+            });
 
             // Paste Support
             window.addEventListener('paste', handlePaste);
 
             // Initialize Sortable
             sortableInstance = new Sortable(fileList, {
-                animation: 150,
-                handle: '.drag-handle',
+                animation: 180,
+                draggable: 'li[data-id]',
                 ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
                 onEnd: () => {
                     syncArrayWithDOM();
+                    updateUI();
                 }
             });
         }
@@ -216,12 +243,13 @@
         }
 
         function handlePaste(e) {
-            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-            for (let index in items) {
-                const item = items[index];
+            const clipboardData = e.clipboardData || (e.originalEvent && e.originalEvent.clipboardData);
+            if (!clipboardData || !clipboardData.items) return;
+
+            for (const item of clipboardData.items) {
                 if (item.kind === 'file') {
                     const blob = item.getAsFile();
-                    // Generate a name for pasted images
+                    if (!blob) continue;
                     const ext = blob.type.split('/')[1] || 'png';
                     const file = new File([blob], `imagen_pegada_${Date.now()}.${ext}`, { type: blob.type });
                     processFiles([file]);
@@ -230,13 +258,39 @@
         }
 
         async function processFiles(files) {
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
+            if (isProcessing) {
+                showToast('Espera a que termine el proceso actual antes de agregar más archivos.', 'warning');
+                return;
+            }
+
+            const incomingFiles = Array.from(files || []);
+            if (!incomingFiles.length) return;
+
+            if (filesData.length + incomingFiles.length > APP_CONFIG.MAX_FILES) {
+                showToast(`Límite alcanzado: máximo ${APP_CONFIG.MAX_FILES} archivos por lote.`, 'warning');
+                return;
+            }
+
+            const existingTotalBytes = filesData.reduce((acc, item) => acc + item.file.size, 0);
+
+            for (let i = 0; i < incomingFiles.length; i++) {
+                const file = incomingFiles[i];
                 const fileType = determineFileType(file);
 
                 if (fileType === 'unsupported') {
                     showToast(`Archivo no soportado: ${file.name}`, 'error');
                     continue;
+                }
+
+                if (file.size > APP_CONFIG.MAX_FILE_SIZE_MB * 1024 * 1024) {
+                    showToast(`Archivo demasiado grande (${file.name}). Máximo ${APP_CONFIG.MAX_FILE_SIZE_MB} MB por archivo.`, 'warning');
+                    continue;
+                }
+
+                const projectedTotal = existingTotalBytes + incomingFiles.slice(0, i + 1).reduce((acc, f) => acc + f.size, 0);
+                if (projectedTotal > APP_CONFIG.MAX_TOTAL_SIZE_MB * 1024 * 1024) {
+                    showToast(`Se superó el límite total de ${APP_CONFIG.MAX_TOTAL_SIZE_MB} MB.`, 'warning');
+                    break;
                 }
 
                 const id = `file_${fileIdCounter++}`;
@@ -268,8 +322,8 @@
             
             if (type.startsWith('image/')) return 'image';
             if (type === 'application/pdf' || name.endsWith('.pdf')) return 'pdf';
-            if (name.endsWith('.docx') || name.endsWith('.doc')) return 'word';
-            if (name.endsWith('.xlsx') || name.endsWith('.xls') || type.includes('spreadsheetml')) return 'excel';
+            if (name.endsWith('.docx')) return 'word';
+            if (name.endsWith('.xlsx') || type.includes('spreadsheetml')) return 'excel';
             
             return 'unsupported';
         }
@@ -325,7 +379,7 @@
             if (emptyState.style.display !== 'none') emptyState.style.display = 'none';
 
             const li = document.createElement('li');
-            li.className = 'flex items-center p-3 sm:p-4 bg-white hover:bg-gray-50 transition-colors group relative';
+            li.className = 'flex items-center p-3 sm:p-4 bg-white hover:bg-slate-50 transition-colors group relative cursor-grab active:cursor-grabbing';
             li.setAttribute('data-id', fileObj.id);
             li.id = `dom_${fileObj.id}`;
 
@@ -434,6 +488,17 @@
             });
             
             totalPagesBadge.innerHTML = `~${totalPages} páginas estimadas`;
+            updateActionButtonsState();
+        }
+
+        function updateActionButtonsState() {
+            const generateBtn = document.getElementById('generateBtn');
+            const clearAllBtn = document.getElementById('clearAllBtn');
+            if (!generateBtn || !clearAllBtn) return;
+
+            const noFiles = filesData.length === 0;
+            generateBtn.disabled = noFiles || isProcessing;
+            clearAllBtn.disabled = noFiles || isProcessing;
         }
 
         // --- Interactions ---
@@ -448,6 +513,7 @@
         }
 
         function clearAllFiles() {
+            if (isProcessing) return;
             if(confirm('¿Estás seguro de eliminar todos los archivos de la lista?')) {
                 filesData = [];
                 const items = fileList.querySelectorAll('li');
@@ -495,8 +561,32 @@
         }
 
         // --- Core Conversion Logic ---
-        
+
+        function buildExportNames() {
+            const now = new Date();
+            const safe = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`;
+            const footer = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+            return { safe, footer };
+        }
+
+        function addFooterToPage(page, footerText) {
+            const { width } = page.getSize();
+            page.drawLine({
+                start: { x: 28, y: 28 },
+                end: { x: width - 28, y: 28 },
+                thickness: 0.6,
+                color: PDFLib.rgb(0.85, 0.88, 0.92)
+            });
+            page.drawText(`Generado: ${footerText}`, {
+                x: 32,
+                y: 16,
+                size: 9,
+                color: PDFLib.rgb(0.4, 0.45, 0.52)
+            });
+        }
+
         async function generateFinalPDF() {
+            if (isProcessing) return;
             if (filesData.length === 0) {
                 showToast('Agrega al menos un archivo primero.', 'warning');
                 return;
@@ -504,6 +594,8 @@
 
             // Sync just in case drag was missed
             syncArrayWithDOM();
+            isProcessing = true;
+            updateActionButtonsState();
             showProgress(true);
             setProgess(0, 'Inicializando motor PDF...');
 
@@ -511,8 +603,10 @@
                 const mergedPdf = await PDFLib.PDFDocument.create();
                 const A4_WIDTH = 595.28;
                 const A4_HEIGHT = 841.89;
+                const exportNames = buildExportNames();
 
                 for (let i = 0; i < filesData.length; i++) {
+                    if (!isProcessing) throw new Error('Proceso cancelado por el usuario.');
                     const fileObj = filesData[i];
                     const progressPercent = Math.round((i / filesData.length) * 100);
                     setProgess(progressPercent, `Procesando: ${fileObj.name}`);
@@ -523,7 +617,10 @@
                         // MERGE PDF
                         const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
                         const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
-                        copiedPages.forEach((page) => mergedPdf.addPage(page));
+                        copiedPages.forEach((page) => {
+                            addFooterToPage(page, exportNames.footer);
+                            mergedPdf.addPage(page);
+                        });
                         
                     } else if (fileObj.type === 'image') {
                         // EMBED IMAGE
@@ -543,6 +640,7 @@
                             width: width,
                             height: height
                         });
+                        addFooterToPage(page, exportNames.footer);
 
                     } else if (fileObj.type === 'word' || fileObj.type === 'excel') {
                         // RENDER OFFICE DOC TO HTML -> CANVAS -> IMAGE -> PDF PAGES
@@ -593,6 +691,7 @@
                                 width: A4_WIDTH,
                                 height: scaledHeight
                             });
+                            addFooterToPage(page, exportNames.footer);
                             pageIndex++;
                         }
                     }
@@ -602,7 +701,7 @@
                 
                 // Save and Download
                 const pdfBytes = await mergedPdf.save();
-                downloadPDF(pdfBytes);
+                downloadPDF(pdfBytes, exportNames.safe);
                 
                 setProgess(100, '¡Completado!');
                 setTimeout(() => { showProgress(false); showToast('PDF generado exitosamente.', 'success'); }, 1000);
@@ -610,20 +709,28 @@
             } catch (error) {
                 console.error("Error generating PDF:", error);
                 showProgress(false);
-                showToast('Ocurrió un error al generar el PDF. Revisa la consola.', 'error');
+                if (String(error.message || '').includes('cancelado')) {
+                    showToast('Proceso cancelado.', 'warning');
+                } else {
+                    showToast('Ocurrió un error al generar el PDF. Revisa la consola.', 'error');
+                }
+            } finally {
+                isProcessing = false;
+                updateActionButtonsState();
             }
         }
 
-        function downloadPDF(pdfBytes) {
+        function cancelGeneration() {
+            if (!isProcessing) return;
+            isProcessing = false;
+            setProgess(0, 'Cancelando...');
+        }
+
+        function downloadPDF(pdfBytes, exportSafeName) {
             const blob = new Blob([pdfBytes], { type: 'application/pdf' });
             const url = URL.createObjectURL(blob);
             
-            // Format Date: caso_dd_mm_aaaa.pdf
-            const d = new Date();
-            const dd = String(d.getDate()).padStart(2, '0');
-            const mm = String(d.getMonth() + 1).padStart(2, '0');
-            const yyyy = d.getFullYear();
-            const filename = `caso_${dd}_${mm}_${yyyy}.pdf`;
+            const filename = `documento_${exportSafeName}.pdf`;
 
             const a = document.createElement('a');
             a.href = url;
