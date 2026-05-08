@@ -1,805 +1,1096 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Unificador de Documentos PDF</title>
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- FontAwesome Icons -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    
-    <!-- Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.5.1/mammoth.browser.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Unificador de Documentos</title>
 
-    <style>
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
 
-        .drag-over { background-color: #eff6ff !important; border-color: #3b82f6 !important; }
-        .sortable-ghost { opacity: 0.4; background-color: #f8fafc; }
-        .sortable-chosen { box-shadow: 0 10px 25px rgba(15, 23, 42, 0.18); }
-
-        .pro-header { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #2563eb 100%); }
-        .glass-badge { background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.24); }
-        
-        /* Loading Spinner */
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3b82f6;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
+  <script>
+    tailwind = {
+      config: {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+              jakarta: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif']
+            }
+          }
         }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+      }
+    };
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
 
-        /* Excel Table Render Styles */
-        .excel-render table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; font-family: sans-serif; }
-        .excel-render th, .excel-render td { border: 1px solid #cbd5e1; padding: 6px; text-align: left; }
-        .excel-render th { background-color: #f8fafc; font-weight: bold; }
-        
-        /* Word Render Styles */
-        .word-render { font-family: 'Times New Roman', Times, serif; font-size: 14px; line-height: 1.5; color: #000; }
-        .word-render p { margin-bottom: 10px; }
-        .word-render h1, .word-render h2, .word-render h3 { margin-top: 15px; margin-bottom: 10px; color: #1e293b; font-family: sans-serif; }
-    </style>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.8.69/build/pdf.min.mjs" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+  <style>
+    :root {
+      --glass: rgba(255, 255, 255, 0.62);
+      --glass-strong: rgba(255, 255, 255, 0.82);
+      --ink: #172033;
+      --muted: #667085;
+      --line: rgba(105, 119, 171, 0.18);
+      --brand-a: #6d5dfc;
+      --brand-b: #11a4ff;
+      --brand-c: #c084fc;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 18%, rgba(192, 132, 252, .34), transparent 28%),
+        radial-gradient(circle at 82% 10%, rgba(17, 164, 255, .28), transparent 32%),
+        radial-gradient(circle at 72% 82%, rgba(109, 93, 252, .20), transparent 30%),
+        linear-gradient(135deg, #fbfbff 0%, #f4f7ff 42%, #ffffff 100%);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,.44) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.44) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,.35), transparent 74%);
+    }
+
+    .glass {
+      background: var(--glass);
+      border: 1px solid rgba(255, 255, 255, .66);
+      box-shadow: 0 24px 70px rgba(51, 65, 85, .12);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+
+    .glass-strong {
+      background: var(--glass-strong);
+      border: 1px solid rgba(255, 255, 255, .78);
+      box-shadow: 0 20px 55px rgba(51, 65, 85, .10);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .gradient-text {
+      background: linear-gradient(90deg, #5147e7, #0ea5e9, #a855f7);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .drop-active {
+      border-color: rgba(109, 93, 252, .85) !important;
+      background: rgba(255, 255, 255, .82) !important;
+      transform: translateY(-2px);
+    }
+
+    .thumb-card {
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+
+    .thumb-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 22px 55px rgba(67, 80, 130, .14);
+      border-color: rgba(109, 93, 252, .30);
+    }
+
+    .sortable-ghost {
+      opacity: .38;
+      transform: scale(.98);
+    }
+
+    .sortable-chosen {
+      cursor: grabbing;
+    }
+
+    .scroll-soft::-webkit-scrollbar { height: 10px; width: 10px; }
+    .scroll-soft::-webkit-scrollbar-track { background: rgba(255,255,255,.38); border-radius: 999px; }
+    .scroll-soft::-webkit-scrollbar-thumb { background: rgba(109,93,252,.30); border-radius: 999px; }
+    .scroll-soft::-webkit-scrollbar-thumb:hover { background: rgba(109,93,252,.45); }
+
+    .preview-bg {
+      background:
+        linear-gradient(45deg, rgba(148, 163, 184, .11) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(148, 163, 184, .11) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(148, 163, 184, .11) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(148, 163, 184, .11) 75%);
+      background-size: 18px 18px;
+      background-position: 0 0, 0 9px, 9px -9px, -9px 0px;
+    }
+
+    .render-root {
+      position: fixed;
+      left: -99999px;
+      top: 0;
+      width: 794px;
+      min-height: 1123px;
+      background: #fff;
+      color: #111827;
+      padding: 36px;
+      font-family: Inter, Arial, sans-serif;
+      line-height: 1.45;
+      overflow: visible;
+    }
+
+    .render-root h1,
+    .render-root h2,
+    .render-root h3 {
+      font-weight: 800;
+      color: #111827;
+      margin: 0 0 16px;
+    }
+
+    .render-root h1 { font-size: 26px; }
+    .render-root h2 { font-size: 20px; margin-top: 22px; }
+    .render-root p { margin: 0 0 12px; }
+    .render-root table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      table-layout: auto;
+    }
+    .render-root td,
+    .render-root th {
+      border: 1px solid #d1d5db;
+      padding: 7px 8px;
+      vertical-align: top;
+      word-break: break-word;
+    }
+    .render-root th {
+      background: #eef2ff;
+      color: #1f2937;
+      font-weight: 800;
+    }
+    .render-root tr:nth-child(even) td { background: #fafafa; }
+    .render-root img { max-width: 100%; height: auto; }
+
+    @media (max-width: 720px) {
+      .mobile-stack { grid-template-columns: 1fr !important; }
+    }
+  </style>
 </head>
-<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col font-sans">
-
-    <!-- Header -->
-    <header class="pro-header shadow-xl sticky top-0 z-10">
-        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="bg-white/15 text-white p-2 rounded-lg border border-white/20">
-                    <i class="fa-solid fa-layer-group text-xl"></i>
-                </div>
-                <h1 class="text-2xl font-bold text-white tracking-tight">Unificador de Documentos</h1>
-            </div>
-            <div class="text-sm font-medium text-white glass-badge px-3 py-1.5 rounded-full flex items-center gap-2 backdrop-blur-sm">
-                <i class="fa-regular fa-file-pdf"></i>
-                <span id="totalPagesBadge">0 páginas estimadas</span>
-            </div>
+<body class="font-sans antialiased">
+  <main class="relative z-10 mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <header class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <section>
+        <div class="mb-3 inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/60 px-3 py-1 text-xs font-bold text-indigo-700 shadow-sm backdrop-blur-xl">
+          <span class="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_0_4px_rgba(52,211,153,.16)]"></span>
+          Conversión y unificación local en navegador
         </div>
+        <h1 class="font-jakarta text-3xl font-extrabold tracking-tight sm:text-5xl">
+          Unificador de <span class="gradient-text">Documentos</span>
+        </h1>
+        <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">
+          Convierte imágenes, PDF, Excel y Word DOCX a páginas internas y genera un único PDF final respetando el orden elegido.
+        </p>
+      </section>
+
+      <section class="glass-strong rounded-3xl p-4">
+        <div class="grid grid-cols-3 gap-3 text-center">
+          <div class="rounded-2xl bg-white/70 px-4 py-3 shadow-sm">
+            <p class="text-xs font-semibold text-slate-500">Archivos</p>
+            <p id="statFiles" class="mt-1 text-2xl font-extrabold text-slate-900">0</p>
+          </div>
+          <div class="rounded-2xl bg-white/70 px-4 py-3 shadow-sm">
+            <p class="text-xs font-semibold text-slate-500">Páginas</p>
+            <p id="statPages" class="mt-1 text-2xl font-extrabold text-slate-900">0</p>
+          </div>
+          <div class="rounded-2xl bg-white/70 px-4 py-3 shadow-sm">
+            <p class="text-xs font-semibold text-slate-500">Errores</p>
+            <p id="statErrors" class="mt-1 text-2xl font-extrabold text-slate-900">0</p>
+          </div>
+        </div>
+      </section>
     </header>
 
-    <!-- Main Content -->
-    <main class="flex-grow max-w-6xl mx-auto w-full px-4 py-8 flex flex-col gap-6">
-        
-        <!-- Dropzone -->
-        <div id="dropZone" class="border-2 border-dashed border-slate-300 bg-white rounded-2xl p-10 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 hover:border-blue-500 hover:bg-blue-50 group min-h-[250px] shadow-lg shadow-slate-200/60">
-            <input type="file" id="fileInput" class="hidden" multiple accept=".jpg,.jpeg,.png,.pdf,.docx,.xlsx">
-            <div class="bg-blue-100 text-blue-600 w-16 h-16 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <i class="fa-solid fa-cloud-arrow-up text-3xl"></i>
+    <section class="grid gap-5 lg:grid-cols-[1.05fr_.95fr] mobile-stack">
+      <div class="space-y-5">
+        <section id="dropZone" class="glass rounded-[2rem] border-2 border-dashed border-indigo-300/60 p-5 transition sm:p-8">
+          <input id="fileInput" class="hidden" type="file" multiple accept=".jpg,.jpeg,.png,.pdf,.xls,.xlsx,.doc,.docx,image/jpeg,image/png,application/pdf" />
+          <div class="flex flex-col items-center justify-center rounded-[1.5rem] bg-white/45 px-5 py-10 text-center sm:py-14">
+            <div class="mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-indigo-500 to-sky-400 text-4xl text-white shadow-2xl shadow-indigo-300/40">
+              ⇪
             </div>
-            <h3 class="text-xl font-semibold text-gray-700 mb-2">Arrastra y suelta tus archivos aquí</h3>
-            <p class="text-gray-500 mb-4 max-w-md">Soporta JPG, PNG, PDF, Word (.docx) y Excel (.xlsx). No se admite .doc o .xls legados. También puedes presionar <kbd class="bg-gray-100 border border-gray-300 px-2 py-1 rounded text-xs text-gray-600 font-mono">CTRL+V</kbd> para pegar imágenes.</p>
-            <button class="bg-white border border-gray-300 text-gray-700 px-6 py-2 rounded-lg shadow-sm hover:bg-gray-50 font-medium transition-colors">
-                Examinar archivos
-            </button>
+            <h2 class="font-jakarta text-2xl font-extrabold text-slate-900">Arrastra tus archivos aquí</h2>
+            <p class="mt-2 max-w-xl text-sm leading-6 text-slate-600">
+              También puedes seleccionar archivos desde tu equipo o pegar imágenes con <strong>CTRL + V</strong>.
+            </p>
+            <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <button id="selectBtn" type="button" class="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white shadow-xl shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800">
+                Seleccionar archivos
+              </button>
+              <button id="clearBtn" type="button" class="rounded-2xl border border-slate-200 bg-white/80 px-5 py-3 text-sm font-bold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white">
+                Limpiar todo
+              </button>
+            </div>
+            <div class="mt-5 flex flex-wrap justify-center gap-2 text-xs font-bold text-slate-500">
+              <span class="rounded-full bg-white/75 px-3 py-1">JPG</span>
+              <span class="rounded-full bg-white/75 px-3 py-1">PNG</span>
+              <span class="rounded-full bg-white/75 px-3 py-1">PDF</span>
+              <span class="rounded-full bg-white/75 px-3 py-1">XLS / XLSX</span>
+              <span class="rounded-full bg-white/75 px-3 py-1">DOCX</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="glass-strong rounded-[2rem] p-5 sm:p-6">
+          <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 class="font-jakarta text-xl font-extrabold text-slate-900">Vista previa y orden</h2>
+              <p class="text-sm text-slate-500">Arrastra las tarjetas o usa los botones para mover cada archivo.</p>
+            </div>
+            <span id="orderHint" class="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700">Orden final del PDF</span>
+          </div>
+
+          <div id="emptyState" class="rounded-3xl border border-dashed border-slate-200 bg-white/55 p-8 text-center">
+            <p class="text-lg font-extrabold text-slate-800">Aún no hay documentos cargados</p>
+            <p class="mt-2 text-sm text-slate-500">Agrega archivos para ver las miniaturas y preparar la unificación.</p>
+          </div>
+
+          <div id="previewGrid" class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"></div>
+        </section>
+      </div>
+
+      <aside class="space-y-5">
+        <section class="glass-strong rounded-[2rem] p-5 sm:p-6">
+          <h2 class="font-jakarta text-xl font-extrabold text-slate-900">Exportación</h2>
+          <p class="mt-2 text-sm leading-6 text-slate-600">
+            Puedes personalizar el nombre del archivo final. Si lo dejas vacío, se usará automáticamente <strong id="fileNamePreview">caso_dd_mm_aaaa.pdf</strong>.
+          </p>
+
+          <label class="mt-5 block rounded-3xl bg-white/72 p-4 shadow-sm">
+            <span class="mb-2 block text-xs font-extrabold uppercase tracking-wide text-slate-500">Nombre del archivo PDF</span>
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <input id="customFileName" type="text" placeholder="Ejemplo: expediente_cliente_juan" class="min-h-12 flex-1 rounded-2xl border border-slate-200 bg-white/90 px-4 text-sm font-bold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100" />
+              <span class="rounded-2xl bg-indigo-50 px-4 py-3 text-sm font-extrabold text-indigo-700">.pdf</span>
+            </div>
+            <p class="mt-2 text-xs font-semibold text-slate-500">Vista previa: <strong id="customFileNamePreview">caso_dd_mm_aaaa.pdf</strong></p>
+          </label>
+
+          <div class="mt-5 rounded-3xl bg-white/72 p-4 shadow-sm">
+            <div class="mb-2 flex items-center justify-between text-xs font-bold text-slate-500">
+              <span id="progressLabel">Progreso</span>
+              <span id="progressValue">0%</span>
+            </div>
+            <div class="h-3 overflow-hidden rounded-full bg-slate-100">
+              <div id="progressBar" class="h-full w-0 rounded-full bg-gradient-to-r from-indigo-500 via-sky-400 to-purple-400 transition-all duration-300"></div>
+            </div>
+            <p id="progressDetail" class="mt-3 min-h-5 text-xs font-semibold text-slate-500">Listo para convertir.</p>
+          </div>
+
+          <button id="generateBtn" type="button" class="mt-5 flex w-full items-center justify-center gap-2 rounded-3xl bg-gradient-to-r from-indigo-600 to-sky-500 px-5 py-4 text-base font-extrabold text-white shadow-2xl shadow-indigo-300/40 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50">
+            <span>Generar PDF</span>
+            <span>→</span>
+          </button>
+
+          <div class="mt-4 rounded-3xl border border-amber-200 bg-amber-50/70 p-4 text-xs leading-5 text-amber-800">
+            <strong>Nota técnica:</strong> DOCX se convierte en navegador. El formato DOC antiguo puede requerir conversión previa a DOCX porque no existe soporte fiable 100% local en navegador puro.
+          </div>
+        </section>
+
+        <section class="glass rounded-[2rem] p-5 sm:p-6">
+          <h2 class="font-jakarta text-lg font-extrabold text-slate-900">Reglas aplicadas</h2>
+          <ul class="mt-4 space-y-3 text-sm text-slate-600">
+            <li class="flex gap-3"><span class="font-bold text-indigo-600">01</span><span>Las imágenes se comprimen y se ajustan a una hoja A4.</span></li>
+            <li class="flex gap-3"><span class="font-bold text-indigo-600">02</span><span>Los PDF se copian directamente para conservar calidad.</span></li>
+            <li class="flex gap-3"><span class="font-bold text-indigo-600">03</span><span>Excel se renderiza como tabla por hoja.</span></li>
+            <li class="flex gap-3"><span class="font-bold text-indigo-600">04</span><span>Word DOCX se renderiza como páginas visuales.</span></li>
+            <li class="flex gap-3"><span class="font-bold text-indigo-600">05</span><span>La rotación se aplica antes de exportar.</span></li>
+          </ul>
+        </section>
+
+        <section id="messages" class="space-y-3"></section>
+      </aside>
+    </section>
+  </main>
+
+  <div id="renderStage" aria-hidden="true"></div>
+
+  <template id="cardTemplate">
+    <article class="thumb-card rounded-3xl border border-white/80 bg-white/72 p-3 shadow-sm" data-id="">
+      <div class="mb-3 flex items-center justify-between gap-2">
+        <span class="orderBadge flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-xs font-extrabold text-white"></span>
+        <span class="statusBadge rounded-full px-2.5 py-1 text-[11px] font-extrabold"></span>
+      </div>
+      <div class="preview-bg relative flex aspect-[3/4] items-center justify-center overflow-hidden rounded-2xl border border-slate-100 bg-white">
+        <img class="thumbImg hidden max-h-full max-w-full object-contain" alt="Miniatura" />
+        <div class="fallbackThumb flex h-full w-full flex-col items-center justify-center p-4 text-center">
+          <div class="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-2xl">📄</div>
+          <p class="fallbackText text-sm font-extrabold text-slate-700">Procesando</p>
         </div>
+        <span class="rotationBadge absolute right-2 top-2 rounded-full bg-slate-950/80 px-2 py-1 text-[10px] font-bold text-white"></span>
+      </div>
+      <div class="mt-3 min-h-[74px]">
+        <p class="fileName truncate text-sm font-extrabold text-slate-900"></p>
+        <p class="fileMeta mt-1 text-xs font-semibold text-slate-500"></p>
+        <p class="fileError mt-2 hidden rounded-2xl bg-rose-50 px-3 py-2 text-xs font-semibold leading-5 text-rose-700"></p>
+      </div>
+      <div class="mt-3 grid grid-cols-5 gap-2">
+        <button class="moveUp rounded-xl bg-slate-100 px-2 py-2 text-xs font-extrabold text-slate-700 hover:bg-slate-200" title="Mover arriba">↑</button>
+        <button class="moveDown rounded-xl bg-slate-100 px-2 py-2 text-xs font-extrabold text-slate-700 hover:bg-slate-200" title="Mover abajo">↓</button>
+        <button class="rotateLeft rounded-xl bg-indigo-50 px-2 py-2 text-xs font-extrabold text-indigo-700 hover:bg-indigo-100" title="Rotar izquierda">↺</button>
+        <button class="rotateRight rounded-xl bg-indigo-50 px-2 py-2 text-xs font-extrabold text-indigo-700 hover:bg-indigo-100" title="Rotar derecha">↻</button>
+        <button class="remove rounded-xl bg-rose-50 px-2 py-2 text-xs font-extrabold text-rose-700 hover:bg-rose-100" title="Eliminar">×</button>
+      </div>
+    </article>
+  </template>
 
-        <!-- Toolbar & Actions -->
-        <div class="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white/95 p-4 rounded-xl shadow-lg shadow-slate-200/70 border border-slate-200" id="actionToolbar" style="display: none;">
-            <div class="flex items-center gap-2 text-sm text-gray-600 font-medium">
-                <i class="fa-solid fa-list-ol"></i>
-                <span id="fileCountText">0 archivos agregados</span>
-            </div>
-            <div class="flex gap-3 w-full sm:w-auto">
-                <button id="clearAllBtn" onclick="clearAllFiles()" class="flex-1 sm:flex-none px-4 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg font-medium transition-colors flex items-center justify-center gap-2" aria-label="Limpiar todos los archivos">
-                    <i class="fa-regular fa-trash-can"></i> Limpiar Todo
-                </button>
-                <button id="generateBtn" onclick="generateFinalPDF()" class="flex-1 sm:flex-none px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-md transition-all flex items-center justify-center gap-2 transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Generar PDF final">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> Generar PDF
-                </button>
-            </div>
-        </div>
+  <script type="module">
+    import * as pdfjsModule from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.8.69/build/pdf.min.mjs';
 
-        <!-- File List -->
-        <div class="bg-white rounded-xl shadow-lg shadow-slate-200/70 border border-slate-200 overflow-hidden flex-grow flex flex-col">
-            <div class="bg-gray-50 border-b border-gray-200 px-4 py-3 flex text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                <div class="w-10 text-center">Orden</div>
-                <div class="flex-grow pl-4">Documento</div>
-                <div class="w-24 text-center hidden md:block">Páginas</div>
-                <div class="w-24 text-center hidden sm:block">Tamaño</div>
-                <div class="w-24 text-center">Acciones</div>
-            </div>
-            
-            <ul id="fileList" class="divide-y divide-gray-100 min-h-[200px] flex-grow">
-                <!-- Empty State -->
-                <div id="emptyState" class="h-full flex flex-col items-center justify-center py-16 text-gray-400">
-                    <i class="fa-regular fa-folder-open text-5xl mb-3 text-gray-300"></i>
-                    <p>No hay archivos cargados aún.</p>
-                </div>
-                <!-- List items will be injected here -->
-            </ul>
-        </div>
-    </main>
+    const pdfjsLib = pdfjsModule;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.8.69/build/pdf.worker.min.mjs';
 
-    <!-- Progress Overlay -->
-    <div id="progressOverlay" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm z-50 hidden flex-col items-center justify-center text-white">
-        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl flex flex-col items-center text-gray-800 text-center">
-            <div class="loader mb-6"></div>
-            <h3 class="text-xl font-bold mb-2 text-gray-800" id="progressTitle">Generando Documento...</h3>
-            <p class="text-gray-500 text-sm mb-6" id="progressDesc">Convirtiendo y unificando archivos. Por favor, no cierres esta ventana.</p>
-            
-            <div class="w-full bg-gray-100 rounded-full h-3 mb-2 overflow-hidden">
-                <div id="progressBar" class="bg-blue-600 h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
-            </div>
-            <div class="flex justify-between w-full text-xs font-medium text-gray-500">
-                <span id="progressText">0%</span>
-                <span id="progressStep">Iniciando...</span>
-            </div>
-            <button id="cancelProcessBtn" class="mt-6 text-sm text-gray-600 hover:text-red-600 transition-colors" type="button">
-                Cancelar proceso
-            </button>
-        </div>
-    </div>
+    const { PDFDocument, degrees } = PDFLib;
 
-    <!-- Hidden container for rendering Office docs -->
-    <div id="renderContainer" style="position: absolute; left: -9999px; top: -9999px; width: 794px; background: white; padding: 40px; color: black; z-index: -1;"></div>
+    const A4_WIDTH = 595.28;
+    const A4_HEIGHT = 841.89;
+    const RENDER_WIDTH = 794;
+    const RENDER_HEIGHT = 1123;
+    const JPEG_QUALITY = 0.76;
+    const MAX_CANVAS_SIDE = 1900;
 
-    <!-- Toasts Container -->
-    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
+    const state = {
+      items: [],
+      busy: false
+    };
 
-    <script>
-        // --- Setup Libraries ---
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+    const els = {
+      dropZone: document.getElementById('dropZone'),
+      fileInput: document.getElementById('fileInput'),
+      selectBtn: document.getElementById('selectBtn'),
+      clearBtn: document.getElementById('clearBtn'),
+      generateBtn: document.getElementById('generateBtn'),
+      previewGrid: document.getElementById('previewGrid'),
+      emptyState: document.getElementById('emptyState'),
+      statFiles: document.getElementById('statFiles'),
+      statPages: document.getElementById('statPages'),
+      statErrors: document.getElementById('statErrors'),
+      progressBar: document.getElementById('progressBar'),
+      progressValue: document.getElementById('progressValue'),
+      progressLabel: document.getElementById('progressLabel'),
+      progressDetail: document.getElementById('progressDetail'),
+      fileNamePreview: document.getElementById('fileNamePreview'),
+      customFileName: document.getElementById('customFileName'),
+      customFileNamePreview: document.getElementById('customFileNamePreview'),
+      messages: document.getElementById('messages'),
+      renderStage: document.getElementById('renderStage'),
+      cardTemplate: document.getElementById('cardTemplate')
+    };
 
-        // --- State Management ---
-        let filesData = [];
-        let fileIdCounter = 0;
-        let sortableInstance = null;
-        let isProcessing = false;
+    const supportedExtensions = new Set(['jpg', 'jpeg', 'png', 'pdf', 'xls', 'xlsx', 'doc', 'docx']);
 
-        const APP_CONFIG = {
-            MAX_FILES: 80,
-            MAX_TOTAL_SIZE_MB: 200,
-            MAX_FILE_SIZE_MB: 50,
-            SUPPORTED_EXTENSIONS: ['.jpg', '.jpeg', '.png', '.pdf', '.docx', '.xlsx']
-        };
+    const sortable = new Sortable(els.previewGrid, {
+      animation: 180,
+      ghostClass: 'sortable-ghost',
+      chosenClass: 'sortable-chosen',
+      handle: '.preview-bg',
+      onEnd: syncOrderFromDom
+    });
 
-        // --- DOM Elements ---
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('fileInput');
-        const fileList = document.getElementById('fileList');
-        const emptyState = document.getElementById('emptyState');
-        const actionToolbar = document.getElementById('actionToolbar');
-        const fileCountText = document.getElementById('fileCountText');
-        const totalPagesBadge = document.getElementById('totalPagesBadge');
-        
-        // --- Initialization ---
-        function init() {
-            // Drag & Drop
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                dropZone.addEventListener(eventName, preventDefaults, false);
-                document.body.addEventListener(eventName, preventDefaults, false);
+    init();
+
+    function init() {
+      updateFileNamePreview();
+      bindEvents();
+      render();
+    }
+
+    function bindEvents() {
+      els.selectBtn.addEventListener('click', () => els.fileInput.click());
+      els.dropZone.addEventListener('click', event => {
+        if (event.target === els.dropZone) els.fileInput.click();
+      });
+
+      els.fileInput.addEventListener('change', event => {
+        addFiles([...event.target.files]);
+        els.fileInput.value = '';
+      });
+
+      ['dragenter', 'dragover'].forEach(eventName => {
+        els.dropZone.addEventListener(eventName, event => {
+          event.preventDefault();
+          event.stopPropagation();
+          els.dropZone.classList.add('drop-active');
+        });
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        els.dropZone.addEventListener(eventName, event => {
+          event.preventDefault();
+          event.stopPropagation();
+          els.dropZone.classList.remove('drop-active');
+        });
+      });
+
+      els.dropZone.addEventListener('drop', event => {
+        const files = [...event.dataTransfer.files];
+        addFiles(files);
+      });
+
+      window.addEventListener('paste', event => {
+        const items = [...(event.clipboardData?.items || [])];
+        const imageFiles = items
+          .filter(item => item.kind === 'file' && item.type.startsWith('image/'))
+          .map(item => item.getAsFile())
+          .filter(Boolean)
+          .map((file, index) => new File([file], `imagen_pegada_${Date.now()}_${index + 1}.${file.type.includes('png') ? 'png' : 'jpg'}`, { type: file.type }));
+
+        if (imageFiles.length) {
+          addFiles(imageFiles);
+          pushMessage('Imagen pegada desde el portapapeles.', 'success');
+        }
+      });
+
+      els.clearBtn.addEventListener('click', () => {
+        if (!state.items.length) return;
+        if (confirm('¿Deseas limpiar todos los archivos cargados?')) {
+          state.items = [];
+          setProgress(0, 'Listo para convertir.');
+          render();
+        }
+      });
+
+      els.generateBtn.addEventListener('click', generateMergedPdf);
+      els.customFileName.addEventListener('input', updateFileNamePreview);
+    }
+
+    function addFiles(files) {
+      if (!files.length) return;
+
+      const incoming = files.map(file => createItem(file));
+      state.items.push(...incoming);
+      render();
+
+      incoming.forEach(item => processItem(item));
+    }
+
+    function createItem(file) {
+      const ext = getExt(file.name);
+      const kind = detectKind(file, ext);
+
+      return {
+        id: crypto.randomUUID(),
+        file,
+        name: file.name,
+        ext,
+        kind,
+        status: supportedExtensions.has(ext) ? 'processing' : 'error',
+        error: supportedExtensions.has(ext) ? '' : 'Formato no compatible.',
+        rotation: 0,
+        pageCount: 0,
+        pageCountLabel: '0 páginas',
+        thumbnail: '',
+        meta: '',
+        workbook: null,
+        sheetNames: [],
+        wordHtml: '',
+        size: file.size
+      };
+    }
+
+    function detectKind(file, ext) {
+      if (['jpg', 'jpeg', 'png'].includes(ext) || file.type.startsWith('image/')) return 'image';
+      if (ext === 'pdf' || file.type === 'application/pdf') return 'pdf';
+      if (['xls', 'xlsx'].includes(ext)) return 'excel';
+      if (['doc', 'docx'].includes(ext)) return 'word';
+      return 'unsupported';
+    }
+
+    async function processItem(item) {
+      try {
+        if (item.kind === 'unsupported') throw new Error('Formato no compatible.');
+        if (item.kind === 'image') await processImage(item);
+        if (item.kind === 'pdf') await processPdf(item);
+        if (item.kind === 'excel') await processExcel(item);
+        if (item.kind === 'word') await processWord(item);
+
+        item.status = 'ready';
+      } catch (error) {
+        item.status = 'error';
+        item.error = normalizeError(error, item);
+      } finally {
+        render();
+      }
+    }
+
+    async function processImage(item) {
+      const dataUrl = await fileToDataUrl(item.file);
+      item.thumbnail = dataUrl;
+      item.pageCount = 1;
+      item.pageCountLabel = '1 página';
+      item.meta = `${item.ext.toUpperCase()} · ${formatBytes(item.size)}`;
+    }
+
+    async function processPdf(item) {
+      const buffer = await item.file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer.slice(0)) }).promise;
+      item.pageCount = pdf.numPages;
+      item.pageCountLabel = `${pdf.numPages} ${pdf.numPages === 1 ? 'página' : 'páginas'}`;
+      item.meta = `PDF · ${formatBytes(item.size)}`;
+
+      const page = await pdf.getPage(1);
+      const viewport = page.getViewport({ scale: 0.72 });
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d', { alpha: false });
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      item.thumbnail = canvas.toDataURL('image/jpeg', 0.72);
+      await pdf.destroy();
+    }
+
+    async function processExcel(item) {
+      const buffer = await item.file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
+      const nonEmptySheets = workbook.SheetNames.filter(name => hasSheetData(workbook.Sheets[name]));
+
+      if (!nonEmptySheets.length) throw new Error('El archivo Excel no contiene hojas con datos.');
+
+      item.workbook = workbook;
+      item.sheetNames = nonEmptySheets;
+      item.pageCount = nonEmptySheets.length;
+      item.pageCountLabel = `${nonEmptySheets.length} ${nonEmptySheets.length === 1 ? 'hoja/página estimada' : 'hojas/páginas estimadas'}`;
+      item.meta = `Excel · ${nonEmptySheets.length} hoja(s) · ${formatBytes(item.size)}`;
+
+      const html = buildExcelHtml(item, nonEmptySheets[0], true);
+      item.thumbnail = await htmlToThumbnail(html);
+    }
+
+    async function processWord(item) {
+      if (item.ext === 'doc') {
+        throw new Error('DOC antiguo no se puede convertir de forma fiable en navegador puro. Convierte el archivo a DOCX y vuelve a cargarlo.');
+      }
+
+      const buffer = await item.file.arrayBuffer();
+      const result = await mammoth.convertToHtml({ arrayBuffer: buffer }, {
+        styleMap: [
+          "p[style-name='Title'] => h1:fresh",
+          "p[style-name='Heading 1'] => h1:fresh",
+          "p[style-name='Heading 2'] => h2:fresh"
+        ]
+      });
+
+      const cleanHtml = result.value?.trim();
+      if (!cleanHtml) throw new Error('No se pudo extraer contenido visible del DOCX.');
+
+      item.wordHtml = cleanHtml;
+      item.pageCount = 1;
+      item.pageCountLabel = '1+ páginas estimadas';
+      item.meta = `Word DOCX · ${formatBytes(item.size)}`;
+      item.thumbnail = await htmlToThumbnail(buildWordHtml(item, true));
+    }
+
+    function render() {
+      syncStats();
+      els.emptyState.classList.toggle('hidden', state.items.length > 0);
+      els.previewGrid.innerHTML = '';
+
+      state.items.forEach((item, index) => {
+        const node = els.cardTemplate.content.firstElementChild.cloneNode(true);
+        node.dataset.id = item.id;
+        node.querySelector('.orderBadge').textContent = index + 1;
+        node.querySelector('.fileName').textContent = item.name;
+        node.querySelector('.fileMeta').textContent = item.meta || `${item.ext.toUpperCase()} · ${formatBytes(item.size)}`;
+
+        const statusBadge = node.querySelector('.statusBadge');
+        setStatusBadge(statusBadge, item.status);
+
+        const img = node.querySelector('.thumbImg');
+        const fallback = node.querySelector('.fallbackThumb');
+        const fallbackText = node.querySelector('.fallbackText');
+
+        if (item.thumbnail) {
+          img.src = item.thumbnail;
+          img.classList.remove('hidden');
+          fallback.classList.add('hidden');
+        } else {
+          fallback.classList.remove('hidden');
+          fallbackText.textContent = item.status === 'error' ? 'Sin vista previa' : 'Procesando';
+        }
+
+        const error = node.querySelector('.fileError');
+        if (item.error) {
+          error.textContent = item.error;
+          error.classList.remove('hidden');
+        }
+
+        const rotationBadge = node.querySelector('.rotationBadge');
+        rotationBadge.textContent = item.rotation ? `${item.rotation}°` : '0°';
+        rotationBadge.classList.toggle('opacity-40', !item.rotation);
+
+        node.querySelector('.moveUp').disabled = index === 0;
+        node.querySelector('.moveDown').disabled = index === state.items.length - 1;
+        node.querySelector('.moveUp').addEventListener('click', () => moveItem(item.id, -1));
+        node.querySelector('.moveDown').addEventListener('click', () => moveItem(item.id, 1));
+        node.querySelector('.remove').addEventListener('click', () => removeItem(item.id));
+        node.querySelector('.rotateLeft').addEventListener('click', () => rotateItem(item.id, -90));
+        node.querySelector('.rotateRight').addEventListener('click', () => rotateItem(item.id, 90));
+
+        els.previewGrid.appendChild(node);
+      });
+
+      els.generateBtn.disabled = state.busy || !state.items.length || state.items.some(item => item.status === 'processing');
+    }
+
+    function setStatusBadge(el, status) {
+      const map = {
+        processing: ['Procesando', 'bg-amber-50 text-amber-700'],
+        ready: ['Listo', 'bg-emerald-50 text-emerald-700'],
+        error: ['Error', 'bg-rose-50 text-rose-700']
+      };
+      const [label, classes] = map[status] || map.processing;
+      el.textContent = label;
+      el.className = `statusBadge rounded-full px-2.5 py-1 text-[11px] font-extrabold ${classes}`;
+    }
+
+    function syncStats() {
+      const readyItems = state.items.filter(item => item.status === 'ready');
+      const errors = state.items.filter(item => item.status === 'error').length;
+      const pages = readyItems.reduce((sum, item) => sum + Number(item.pageCount || 0), 0);
+
+      els.statFiles.textContent = state.items.length;
+      els.statPages.textContent = pages;
+      els.statErrors.textContent = errors;
+    }
+
+    function syncOrderFromDom() {
+      const orderedIds = [...els.previewGrid.children].map(node => node.dataset.id);
+      state.items.sort((a, b) => orderedIds.indexOf(a.id) - orderedIds.indexOf(b.id));
+      render();
+    }
+
+    function moveItem(id, direction) {
+      const index = state.items.findIndex(item => item.id === id);
+      const target = index + direction;
+      if (index < 0 || target < 0 || target >= state.items.length) return;
+      const [item] = state.items.splice(index, 1);
+      state.items.splice(target, 0, item);
+      render();
+    }
+
+    function removeItem(id) {
+      state.items = state.items.filter(item => item.id !== id);
+      render();
+    }
+
+    function rotateItem(id, delta) {
+      const item = state.items.find(current => current.id === id);
+      if (!item) return;
+      item.rotation = normalizeRotation(item.rotation + delta);
+      render();
+    }
+
+    async function generateMergedPdf() {
+      if (!state.items.length || state.busy) return;
+
+      const processing = state.items.some(item => item.status === 'processing');
+      if (processing) {
+        pushMessage('Aún hay archivos procesándose. Espera a que todos estén listos.', 'warning');
+        return;
+      }
+
+      const errored = state.items.filter(item => item.status === 'error');
+      if (errored.length) {
+        const proceed = confirm(`Hay ${errored.length} archivo(s) con error. ¿Deseas generar el PDF omitiéndolos?`);
+        if (!proceed) return;
+      }
+
+      const validItems = state.items.filter(item => item.status === 'ready');
+      if (!validItems.length) {
+        pushMessage('No hay archivos válidos para generar el PDF.', 'error');
+        return;
+      }
+
+      try {
+        state.busy = true;
+        els.generateBtn.disabled = true;
+        clearMessages();
+        setProgress(2, 'Preparando documento final...');
+
+        const finalPdf = await PDFDocument.create();
+        let realPageCount = 0;
+
+        for (let index = 0; index < validItems.length; index++) {
+          const item = validItems[index];
+          const baseProgress = Math.round((index / validItems.length) * 92) + 3;
+          setProgress(baseProgress, `Convirtiendo ${index + 1}/${validItems.length}: ${item.name}`);
+
+          if (item.kind === 'image') {
+            const canvas = await imageFileToCanvas(item.file);
+            realPageCount += await addSingleCanvasPage(finalPdf, canvas, item.rotation);
+          }
+
+          if (item.kind === 'pdf') {
+            const sourceBytes = await item.file.arrayBuffer();
+            const sourcePdf = await PDFDocument.load(sourceBytes, { ignoreEncryption: true });
+            const pageIndices = sourcePdf.getPageIndices();
+            const copiedPages = await finalPdf.copyPages(sourcePdf, pageIndices);
+            copiedPages.forEach(page => {
+              if (item.rotation) {
+                const current = page.getRotation().angle || 0;
+                page.setRotation(degrees(normalizeRotation(current + item.rotation)));
+              }
+              finalPdf.addPage(page);
+              realPageCount += 1;
             });
+          }
 
-            ['dragenter', 'dragover'].forEach(eventName => {
-                dropZone.addEventListener(eventName, () => dropZone.classList.add('drag-over'), false);
-            });
-
-            ['dragleave', 'drop'].forEach(eventName => {
-                dropZone.addEventListener(eventName, () => dropZone.classList.remove('drag-over'), false);
-            });
-
-            dropZone.addEventListener('drop', handleDrop, false);
-            dropZone.addEventListener('click', () => fileInput.click());
-            fileInput.addEventListener('change', handleFileSelect);
-            document.getElementById('cancelProcessBtn').addEventListener('click', cancelGeneration);
-
-            // Accessibility keyboard support
-            dropZone.setAttribute('tabindex', '0');
-            dropZone.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    fileInput.click();
-                }
-            });
-
-            // Paste Support
-            window.addEventListener('paste', handlePaste);
-
-            // Initialize Sortable
-            sortableInstance = new Sortable(fileList, {
-                animation: 180,
-                draggable: 'li[data-id]',
-                ghostClass: 'sortable-ghost',
-                chosenClass: 'sortable-chosen',
-                onEnd: () => {
-                    syncArrayWithDOM();
-                    updateUI();
-                }
-            });
-        }
-
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-
-        // --- File Handlers ---
-        function handleDrop(e) {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            processFiles(files);
-        }
-
-        function handleFileSelect(e) {
-            const files = e.target.files;
-            processFiles(files);
-            fileInput.value = ''; // Reset
-        }
-
-        function handlePaste(e) {
-            const clipboardData = e.clipboardData || (e.originalEvent && e.originalEvent.clipboardData);
-            if (!clipboardData || !clipboardData.items) return;
-
-            for (const item of clipboardData.items) {
-                if (item.kind === 'file') {
-                    const blob = item.getAsFile();
-                    if (!blob) continue;
-                    const ext = blob.type.split('/')[1] || 'png';
-                    const file = new File([blob], `imagen_pegada_${Date.now()}.${ext}`, { type: blob.type });
-                    processFiles([file]);
-                }
+          if (item.kind === 'excel') {
+            for (const sheetName of item.sheetNames) {
+              const html = buildExcelHtml(item, sheetName, false);
+              const canvas = await htmlToCanvas(html);
+              realPageCount += await addLongCanvasPages(finalPdf, canvas, item.rotation);
             }
+          }
+
+          if (item.kind === 'word') {
+            const html = buildWordHtml(item, false);
+            const canvas = await htmlToCanvas(html);
+            realPageCount += await addLongCanvasPages(finalPdf, canvas, item.rotation);
+          }
         }
 
-        async function processFiles(files) {
-            if (isProcessing) {
-                showToast('Espera a que termine el proceso actual antes de agregar más archivos.', 'warning');
-                return;
-            }
+        setProgress(96, 'Optimizando y guardando PDF...');
+        const pdfBytes = await finalPdf.save({ useObjectStreams: true, addDefaultPage: false });
+        const outputFileName = buildFileName();
+        downloadBlob(new Blob([pdfBytes], { type: 'application/pdf' }), outputFileName);
 
-            const incomingFiles = Array.from(files || []);
-            if (!incomingFiles.length) return;
+        setProgress(100, `PDF generado correctamente con ${realPageCount} ${realPageCount === 1 ? 'página' : 'páginas'}.`);
+        pushMessage(`PDF final generado: ${outputFileName} · ${realPageCount} página(s).`, 'success');
+      } catch (error) {
+        console.error(error);
+        setProgress(0, 'No se pudo generar el PDF final.');
+        pushMessage(normalizeExportError(error), 'error');
+      } finally {
+        state.busy = false;
+        render();
+      }
+    }
 
-            if (filesData.length + incomingFiles.length > APP_CONFIG.MAX_FILES) {
-                showToast(`Límite alcanzado: máximo ${APP_CONFIG.MAX_FILES} archivos por lote.`, 'warning');
-                return;
-            }
+    async function addSingleCanvasPage(pdfDoc, sourceCanvas, rotation = 0) {
+      const rotatedCanvas = await rotateCanvasIfNeeded(sourceCanvas, rotation);
+      const optimizedCanvas = limitCanvasSize(rotatedCanvas, MAX_CANVAS_SIDE);
+      const jpgBytes = await canvasToJpegBytes(optimizedCanvas, JPEG_QUALITY);
+      const jpg = await pdfDoc.embedJpg(jpgBytes);
+      const page = pdfDoc.addPage([A4_WIDTH, A4_HEIGHT]);
+      const margin = 24;
+      const dims = jpg.scaleToFit(A4_WIDTH - margin * 2, A4_HEIGHT - margin * 2);
+      page.drawImage(jpg, {
+        x: (A4_WIDTH - dims.width) / 2,
+        y: (A4_HEIGHT - dims.height) / 2,
+        width: dims.width,
+        height: dims.height
+      });
+      return 1;
+    }
 
-            const existingTotalBytes = filesData.reduce((acc, item) => acc + item.file.size, 0);
+    async function addLongCanvasPages(pdfDoc, sourceCanvas, rotation = 0) {
+      const pageHeightPx = Math.floor(sourceCanvas.width * (A4_HEIGHT / A4_WIDTH));
+      const totalSlices = Math.max(1, Math.ceil(sourceCanvas.height / pageHeightPx));
+      let pages = 0;
 
-            for (let i = 0; i < incomingFiles.length; i++) {
-                const file = incomingFiles[i];
-                const fileType = determineFileType(file);
+      for (let sliceIndex = 0; sliceIndex < totalSlices; sliceIndex++) {
+        const sy = sliceIndex * pageHeightPx;
+        const sh = Math.min(pageHeightPx, sourceCanvas.height - sy);
+        const sliceCanvas = document.createElement('canvas');
+        sliceCanvas.width = sourceCanvas.width;
+        sliceCanvas.height = sh;
+        const ctx = sliceCanvas.getContext('2d', { alpha: false });
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+        ctx.drawImage(sourceCanvas, 0, sy, sourceCanvas.width, sh, 0, 0, sourceCanvas.width, sh);
 
-                if (fileType === 'unsupported') {
-                    showToast(`Archivo no soportado: ${file.name}`, 'error');
-                    continue;
-                }
+        await addSingleCanvasPage(pdfDoc, sliceCanvas, rotation);
+        pages += 1;
+      }
 
-                if (file.size > APP_CONFIG.MAX_FILE_SIZE_MB * 1024 * 1024) {
-                    showToast(`Archivo demasiado grande (${file.name}). Máximo ${APP_CONFIG.MAX_FILE_SIZE_MB} MB por archivo.`, 'warning');
-                    continue;
-                }
+      return pages;
+    }
 
-                const projectedTotal = existingTotalBytes + incomingFiles.slice(0, i + 1).reduce((acc, f) => acc + f.size, 0);
-                if (projectedTotal > APP_CONFIG.MAX_TOTAL_SIZE_MB * 1024 * 1024) {
-                    showToast(`Se superó el límite total de ${APP_CONFIG.MAX_TOTAL_SIZE_MB} MB.`, 'warning');
-                    break;
-                }
+    async function imageFileToCanvas(file) {
+      const dataUrl = await fileToDataUrl(file);
+      const img = await loadImage(dataUrl);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      const ctx = canvas.getContext('2d', { alpha: false });
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+      return limitCanvasSize(canvas, MAX_CANVAS_SIDE);
+    }
 
-                const id = `file_${fileIdCounter++}`;
-                const fileObj = {
-                    id: id,
-                    file: file,
-                    name: file.name,
-                    size: formatBytes(file.size),
-                    type: fileType,
-                    pages: fileType === 'image' ? 1 : '?', // Images are 1 page, others need calculation
-                    thumbnail: null // Will be generated
-                };
+    function limitCanvasSize(canvas, maxSide) {
+      const largest = Math.max(canvas.width, canvas.height);
+      if (largest <= maxSide) return canvas;
 
-                filesData.push(fileObj);
-                renderFileItem(fileObj);
-                updateUI();
-                
-                // Generate Thumbnail & Page count async
-                generateThumbnailInfo(fileObj).then(() => {
-                    updateFileItemDOM(fileObj);
-                    updateUI();
-                });
-            }
+      const ratio = maxSide / largest;
+      const resized = document.createElement('canvas');
+      resized.width = Math.max(1, Math.round(canvas.width * ratio));
+      resized.height = Math.max(1, Math.round(canvas.height * ratio));
+      const ctx = resized.getContext('2d', { alpha: false });
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, resized.width, resized.height);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(canvas, 0, 0, resized.width, resized.height);
+      return resized;
+    }
+
+    async function rotateCanvasIfNeeded(canvas, rotation) {
+      const angle = normalizeRotation(rotation);
+      if (!angle) return canvas;
+
+      const radians = angle * Math.PI / 180;
+      const swap = angle === 90 || angle === 270;
+      const rotated = document.createElement('canvas');
+      rotated.width = swap ? canvas.height : canvas.width;
+      rotated.height = swap ? canvas.width : canvas.height;
+      const ctx = rotated.getContext('2d', { alpha: false });
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, rotated.width, rotated.height);
+      ctx.translate(rotated.width / 2, rotated.height / 2);
+      ctx.rotate(radians);
+      ctx.drawImage(canvas, -canvas.width / 2, -canvas.height / 2);
+      return rotated;
+    }
+
+    function buildExcelHtml(item, sheetName, compact = false) {
+      const sheet = item.workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
+      const limitedRows = compact ? rows.slice(0, 18) : rows;
+      const maxColumns = compact ? Math.min(8, Math.max(...limitedRows.map(row => row.length), 1)) : Math.max(...limitedRows.map(row => row.length), 1);
+
+      const table = limitedRows.map((row, rowIndex) => {
+        const cells = Array.from({ length: maxColumns }, (_, colIndex) => {
+          const value = escapeHtml(row[colIndex] ?? '');
+          const tag = rowIndex === 0 ? 'th' : 'td';
+          return `<${tag}>${value}</${tag}>`;
+        }).join('');
+        return `<tr>${cells}</tr>`;
+      }).join('');
+
+      return `
+        <section>
+          <h1>${escapeHtml(item.name)}</h1>
+          <h2>Hoja: ${escapeHtml(sheetName)}</h2>
+          <table>${table}</table>
+          ${compact && rows.length > limitedRows.length ? `<p style="margin-top:16px;color:#6b7280;font-weight:700;">Vista previa parcial. El PDF incluirá la hoja completa.</p>` : ''}
+        </section>
+      `;
+    }
+
+    function buildWordHtml(item, compact = false) {
+      const html = compact ? trimHtmlPreview(item.wordHtml) : item.wordHtml;
+      return `
+        <section>
+          <h1>${escapeHtml(item.name)}</h1>
+          <div>${html}</div>
+          ${compact ? `<p style="margin-top:16px;color:#6b7280;font-weight:700;">Vista previa parcial. El PDF incluirá el documento completo.</p>` : ''}
+        </section>
+      `;
+    }
+
+    function trimHtmlPreview(html) {
+      const temp = document.createElement('div');
+      temp.innerHTML = html;
+      const text = temp.innerText || '';
+      if (text.length < 1300) return html;
+      return `<p>${escapeHtml(text.slice(0, 1300))}...</p>`;
+    }
+
+    async function htmlToCanvas(html) {
+      const node = document.createElement('div');
+      node.className = 'render-root';
+      node.style.width = `${RENDER_WIDTH}px`;
+      node.style.minHeight = `${RENDER_HEIGHT}px`;
+      node.innerHTML = html;
+      els.renderStage.appendChild(node);
+      await wait(80);
+      const canvas = await html2canvas(node, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        logging: false,
+        windowWidth: RENDER_WIDTH
+      });
+      node.remove();
+      return canvas;
+    }
+
+    async function htmlToThumbnail(html) {
+      const canvas = await htmlToCanvas(html);
+      const thumb = limitCanvasSize(canvas, 520);
+      return thumb.toDataURL('image/jpeg', 0.72);
+    }
+
+    function hasSheetData(sheet) {
+      if (!sheet || !sheet['!ref']) return false;
+      const range = XLSX.utils.decode_range(sheet['!ref']);
+      for (let row = range.s.r; row <= range.e.r; row++) {
+        for (let col = range.s.c; col <= range.e.c; col++) {
+          const cell = sheet[XLSX.utils.encode_cell({ r: row, c: col })];
+          if (cell && String(cell.v ?? '').trim() !== '') return true;
         }
+      }
+      return false;
+    }
 
-        function determineFileType(file) {
-            const type = file.type;
-            const name = file.name.toLowerCase();
-            
-            if (type.startsWith('image/')) return 'image';
-            if (type === 'application/pdf' || name.endsWith('.pdf')) return 'pdf';
-            if (name.endsWith('.docx')) return 'word';
-            if (name.endsWith('.xlsx') || type.includes('spreadsheetml')) return 'excel';
-            
-            return 'unsupported';
-        }
+    function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('No se pudo leer el archivo.'));
+        reader.readAsDataURL(file);
+      });
+    }
 
-        // --- Thumbnail & Info Generation ---
-        async function generateThumbnailInfo(fileObj) {
-            try {
-                if (fileObj.type === 'image') {
-                    const dataUrl = await readFileAsDataURL(fileObj.file);
-                    fileObj.thumbnail = dataUrl;
-                    fileObj.pages = 1;
-                } else if (fileObj.type === 'pdf') {
-                    const arrayBuffer = await fileObj.file.arrayBuffer();
-                    const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-                    fileObj.pages = pdf.numPages;
-                    
-                    // Render first page as thumbnail
-                    const page = await pdf.getPage(1);
-                    const viewport = page.getViewport({ scale: 0.5 });
-                    const canvas = document.createElement('canvas');
-                    const context = canvas.getContext('2d');
-                    canvas.height = viewport.height;
-                    canvas.width = viewport.width;
-                    await page.render({ canvasContext: context, viewport: viewport }).promise;
-                    fileObj.thumbnail = canvas.toDataURL('image/jpeg', 0.8);
-                } else if (fileObj.type === 'word') {
-                    // Placeholder thumbnail for Word
-                    fileObj.thumbnail = 'word_icon'; 
-                    // Estimate pages based on size (rough)
-                    fileObj.pages = Math.max(1, Math.ceil(fileObj.file.size / 50000)); 
-                } else if (fileObj.type === 'excel') {
-                    // Placeholder thumbnail for Excel
-                    fileObj.thumbnail = 'excel_icon';
-                    fileObj.pages = 1; // Will dynamically expand during render
-                }
-            } catch (error) {
-                console.error("Error generating thumbnail for", fileObj.name, error);
-                fileObj.thumbnail = 'error_icon';
-            }
-        }
+    function loadImage(src) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('No se pudo cargar la imagen.'));
+        img.src = src;
+      });
+    }
 
-        function readFileAsDataURL(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = e => resolve(e.target.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-        }
+    function canvasToJpegBytes(canvas, quality) {
+      return new Promise((resolve, reject) => {
+        canvas.toBlob(blob => {
+          if (!blob) return reject(new Error('No se pudo comprimir la página.'));
+          blob.arrayBuffer().then(resolve).catch(reject);
+        }, 'image/jpeg', quality);
+      });
+    }
 
-        // --- UI Rendering ---
-        function renderFileItem(fileObj) {
-            if (emptyState.style.display !== 'none') emptyState.style.display = 'none';
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1200);
+    }
 
-            const li = document.createElement('li');
-            li.className = 'flex items-center p-3 sm:p-4 bg-white hover:bg-slate-50 transition-colors group relative cursor-grab active:cursor-grabbing';
-            li.setAttribute('data-id', fileObj.id);
-            li.id = `dom_${fileObj.id}`;
+    function setProgress(percent, detail = '') {
+      const safePercent = Math.max(0, Math.min(100, Math.round(percent)));
+      els.progressBar.style.width = `${safePercent}%`;
+      els.progressValue.textContent = `${safePercent}%`;
+      els.progressDetail.textContent = detail;
+    }
 
-            li.innerHTML = `
-                <!-- Drag Handle -->
-                <div class="w-10 flex justify-center text-gray-400 cursor-grab active:cursor-grabbing drag-handle hover:text-blue-500">
-                    <i class="fa-solid fa-grip-vertical text-xl"></i>
-                </div>
-                
-                <!-- Thumbnail & Name -->
-                <div class="flex-grow pl-2 sm:pl-4 flex items-center gap-4 overflow-hidden">
-                    <div class="w-12 h-16 bg-gray-100 rounded border border-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0" id="thumb_${fileObj.id}">
-                        <i class="fa-solid fa-circle-notch fa-spin text-gray-400"></i>
-                    </div>
-                    <div class="flex flex-col min-w-0">
-                        <span class="text-sm font-semibold text-gray-800 truncate" title="${fileObj.name}">${fileObj.name}</span>
-                        <div class="flex items-center gap-2 mt-1">
-                            ${getTypeBadge(fileObj.type)}
-                            <span class="text-xs text-gray-400 block sm:hidden">${fileObj.size}</span>
-                        </div>
-                    </div>
-                </div>
+    function pushMessage(message, type = 'info') {
+      const styles = {
+        success: 'border-emerald-200 bg-emerald-50/80 text-emerald-800',
+        warning: 'border-amber-200 bg-amber-50/80 text-amber-800',
+        error: 'border-rose-200 bg-rose-50/80 text-rose-800',
+        info: 'border-sky-200 bg-sky-50/80 text-sky-800'
+      };
+      const div = document.createElement('div');
+      div.className = `rounded-3xl border p-4 text-sm font-semibold leading-6 ${styles[type] || styles.info}`;
+      div.textContent = message;
+      els.messages.prepend(div);
+    }
 
-                <!-- Pages (Desktop) -->
-                <div class="w-24 text-center hidden md:flex items-center justify-center text-sm font-medium text-gray-600">
-                    <span id="pages_${fileObj.id}" class="bg-gray-100 px-2 py-1 rounded text-xs"><i class="fa-solid fa-circle-notch fa-spin text-gray-400"></i></span>
-                </div>
+    function clearMessages() {
+      els.messages.innerHTML = '';
+    }
 
-                <!-- Size (Tablet/Desktop) -->
-                <div class="w-24 text-center hidden sm:block text-xs text-gray-500">
-                    ${fileObj.size}
-                </div>
+    function updateFileNamePreview() {
+      const fileName = buildFileName();
+      els.fileNamePreview.textContent = defaultFileName();
+      els.customFileNamePreview.textContent = fileName;
+    }
 
-                <!-- Actions -->
-                <div class="w-24 flex items-center justify-center gap-2">
-                    <div class="flex flex-col sm:flex-row gap-1">
-                        <button onclick="moveItem('${fileObj.id}', -1)" class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Mover Arriba">
-                            <i class="fa-solid fa-chevron-up text-xs"></i>
-                        </button>
-                        <button onclick="moveItem('${fileObj.id}', 1)" class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" title="Mover Abajo">
-                            <i class="fa-solid fa-chevron-down text-xs"></i>
-                        </button>
-                    </div>
-                    <button onclick="removeFile('${fileObj.id}')" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors ml-1" title="Eliminar">
-                        <i class="fa-regular fa-trash-can"></i>
-                    </button>
-                </div>
-            `;
-            fileList.appendChild(li);
-        }
+    function buildFileName() {
+      const customName = sanitizeFileName(els.customFileName?.value || '');
+      const defaultName = defaultFileName().slice(0, -4);
+      return `${customName || defaultName}.pdf`;
+    }
 
-        function updateFileItemDOM(fileObj) {
-            const thumbDiv = document.getElementById(`thumb_${fileObj.id}`);
-            const pagesSpan = document.getElementById(`pages_${fileObj.id}`);
-            
-            if (thumbDiv) {
-                if (fileObj.thumbnail && fileObj.thumbnail.startsWith('data:')) {
-                    thumbDiv.innerHTML = `<img src="${fileObj.thumbnail}" class="w-full h-full object-cover">`;
-                } else if (fileObj.thumbnail === 'word_icon') {
-                    thumbDiv.innerHTML = `<i class="fa-solid fa-file-word text-2xl text-blue-600"></i>`;
-                } else if (fileObj.thumbnail === 'excel_icon') {
-                    thumbDiv.innerHTML = `<i class="fa-solid fa-file-excel text-2xl text-green-600"></i>`;
-                } else {
-                    thumbDiv.innerHTML = `<i class="fa-solid fa-file text-2xl text-gray-400"></i>`;
-                }
-            }
-            
-            if (pagesSpan) {
-                pagesSpan.innerHTML = `${fileObj.pages} pág${fileObj.pages !== 1 ? 's' : ''}`;
-            }
-        }
+    function defaultFileName() {
+      const date = new Date();
+      const dd = String(date.getDate()).padStart(2, '0');
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const yyyy = date.getFullYear();
+      return `caso_${dd}_${mm}_${yyyy}.pdf`;
+    }
 
-        function getTypeBadge(type) {
-            const styles = {
-                image: 'bg-purple-100 text-purple-700 border-purple-200',
-                pdf: 'bg-red-100 text-red-700 border-red-200',
-                word: 'bg-blue-100 text-blue-700 border-blue-200',
-                excel: 'bg-green-100 text-green-700 border-green-200',
-            };
-            const icons = {
-                image: 'fa-image', pdf: 'fa-file-pdf', word: 'fa-file-word', excel: 'fa-file-excel'
-            };
-            const names = {
-                image: 'IMG', pdf: 'PDF', word: 'WORD', excel: 'EXCEL'
-            };
-            
-            return `<span class="text-[10px] font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${styles[type]}"><i class="fa-solid ${icons[type]}"></i> ${names[type]}</span>`;
-        }
+    function sanitizeFileName(value) {
+      const forbiddenChars = new Set([String.fromCharCode(92), '/', ':', '*', '?', '"', '<', '>', '|']);
+      const raw = String(value).trim();
+      const withoutPdf = raw.toLowerCase().endsWith('.pdf') ? raw.slice(0, -4) : raw;
+      let clean = '';
+      let previousWasUnderscore = false;
 
-        function updateUI() {
-            if (filesData.length > 0) {
-                emptyState.style.display = 'none';
-                actionToolbar.style.display = 'flex';
-            } else {
-                emptyState.style.display = 'flex';
-                actionToolbar.style.display = 'none';
-            }
+      for (const char of withoutPdf) {
+        const nextChar = forbiddenChars.has(char) || char.trim() === '' ? '_' : char;
+        if (nextChar === '_' && previousWasUnderscore) continue;
+        clean += nextChar;
+        previousWasUnderscore = nextChar === '_';
+      }
 
-            fileCountText.innerHTML = `<b>${filesData.length}</b> archivo${filesData.length !== 1 ? 's' : ''} listo${filesData.length !== 1 ? 's' : ''}`;
-            
-            let totalPages = 0;
-            let hasUnknowns = false;
-            filesData.forEach(f => {
-                if (typeof f.pages === 'number') totalPages += f.pages;
-                else hasUnknowns = true;
-            });
-            
-            totalPagesBadge.innerHTML = `~${totalPages} páginas estimadas`;
-            updateActionButtonsState();
-        }
+      return clean.replace(/^_+|_+$/g, '');
+    }
 
-        function updateActionButtonsState() {
-            const generateBtn = document.getElementById('generateBtn');
-            const clearAllBtn = document.getElementById('clearAllBtn');
-            if (!generateBtn || !clearAllBtn) return;
+    function getExt(fileName) {
+      return String(fileName).split('.').pop().toLowerCase().trim();
+    }
 
-            const noFiles = filesData.length === 0;
-            generateBtn.disabled = noFiles || isProcessing;
-            clearAllBtn.disabled = noFiles || isProcessing;
-        }
+    function formatBytes(bytes) {
+      if (!bytes) return '0 B';
+      const units = ['B', 'KB', 'MB', 'GB'];
+      const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+      return `${(bytes / Math.pow(1024, index)).toFixed(index ? 1 : 0)} ${units[index]}`;
+    }
 
-        // --- Interactions ---
-        function removeFile(id) {
-            filesData = filesData.filter(f => f.id !== id);
-            const el = document.getElementById(`dom_${id}`);
-            if (el) {
-                el.style.opacity = '0';
-                el.style.transform = 'scale(0.95)';
-                setTimeout(() => { el.remove(); updateUI(); }, 200);
-            }
-        }
+    function normalizeRotation(value) {
+      return ((value % 360) + 360) % 360;
+    }
 
-        function clearAllFiles() {
-            if (isProcessing) return;
-            if(confirm('¿Estás seguro de eliminar todos los archivos de la lista?')) {
-                filesData = [];
-                const items = fileList.querySelectorAll('li');
-                items.forEach(el => el.remove());
-                updateUI();
-                showToast('Lista limpiada', 'success');
-            }
-        }
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
 
-        function syncArrayWithDOM() {
-            const items = fileList.querySelectorAll('li[data-id]');
-            const newArray = [];
-            items.forEach(item => {
-                const id = item.getAttribute('data-id');
-                const fileObj = filesData.find(f => f.id === id);
-                if (fileObj) newArray.push(fileObj);
-            });
-            filesData = newArray;
-        }
+    function normalizeError(error, item) {
+      const message = error?.message || String(error || 'Error desconocido.');
+      if (item?.kind === 'pdf' && /encrypted|password/i.test(message)) {
+        return 'El PDF parece estar protegido o cifrado. Retira la contraseña antes de cargarlo.';
+      }
+      return message;
+    }
 
-        function moveItem(id, direction) {
-            const index = filesData.findIndex(f => f.id === id);
-            if (index < 0) return;
-            
-            const newIndex = index + direction;
-            if (newIndex < 0 || newIndex >= filesData.length) return;
+    function normalizeExportError(error) {
+      const message = error?.message || String(error || 'Error desconocido.');
+      if (/encrypted|password/i.test(message)) return 'Uno de los PDF está protegido con contraseña y no se puede fusionar en navegador.';
+      return message;
+    }
 
-            // Swap in array
-            const temp = filesData[index];
-            filesData[index] = filesData[newIndex];
-            filesData[newIndex] = temp;
-
-            // Swap in DOM
-            const list = document.getElementById('fileList');
-            const items = list.querySelectorAll('li[data-id]');
-            const elem = document.getElementById(`dom_${id}`);
-            
-            if (direction === -1) {
-                list.insertBefore(elem, items[newIndex]);
-            } else {
-                list.insertBefore(elem, items[newIndex].nextSibling);
-            }
-            
-            syncArrayWithDOM(); // Just to be sure
-        }
-
-        // --- Core Conversion Logic ---
-
-        function buildExportNames() {
-            const now = new Date();
-            const safe = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`;
-            const footer = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-            return { safe, footer };
-        }
-
-        function addFooterToPage(page, footerText) {
-            const { width } = page.getSize();
-            page.drawLine({
-                start: { x: 28, y: 28 },
-                end: { x: width - 28, y: 28 },
-                thickness: 0.6,
-                color: PDFLib.rgb(0.85, 0.88, 0.92)
-            });
-            page.drawText(`Generado: ${footerText}`, {
-                x: 32,
-                y: 16,
-                size: 9,
-                color: PDFLib.rgb(0.4, 0.45, 0.52)
-            });
-        }
-
-        async function generateFinalPDF() {
-            if (isProcessing) return;
-            if (filesData.length === 0) {
-                showToast('Agrega al menos un archivo primero.', 'warning');
-                return;
-            }
-
-            // Sync just in case drag was missed
-            syncArrayWithDOM();
-            isProcessing = true;
-            updateActionButtonsState();
-            showProgress(true);
-            setProgess(0, 'Inicializando motor PDF...');
-
-            try {
-                const mergedPdf = await PDFLib.PDFDocument.create();
-                const A4_WIDTH = 595.28;
-                const A4_HEIGHT = 841.89;
-                const exportNames = buildExportNames();
-
-                for (let i = 0; i < filesData.length; i++) {
-                    if (!isProcessing) throw new Error('Proceso cancelado por el usuario.');
-                    const fileObj = filesData[i];
-                    const progressPercent = Math.round((i / filesData.length) * 100);
-                    setProgess(progressPercent, `Procesando: ${fileObj.name}`);
-
-                    const arrayBuffer = await fileObj.file.arrayBuffer();
-
-                    if (fileObj.type === 'pdf') {
-                        // MERGE PDF
-                        const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
-                        const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
-                        copiedPages.forEach((page) => {
-                            addFooterToPage(page, exportNames.footer);
-                            mergedPdf.addPage(page);
-                        });
-                        
-                    } else if (fileObj.type === 'image') {
-                        // EMBED IMAGE
-                        let img;
-                        if (fileObj.file.type === 'image/png') {
-                            img = await mergedPdf.embedPng(arrayBuffer);
-                        } else {
-                            img = await mergedPdf.embedJpg(arrayBuffer);
-                        }
-                        
-                        const page = mergedPdf.addPage([A4_WIDTH, A4_HEIGHT]);
-                        // Scale to fit A4 leaving a 20pt margin
-                        const { width, height } = img.scaleToFit(A4_WIDTH - 40, A4_HEIGHT - 40); 
-                        page.drawImage(img, {
-                            x: (A4_WIDTH / 2) - (width / 2),
-                            y: (A4_HEIGHT / 2) - (height / 2),
-                            width: width,
-                            height: height
-                        });
-                        addFooterToPage(page, exportNames.footer);
-
-                    } else if (fileObj.type === 'word' || fileObj.type === 'excel') {
-                        // RENDER OFFICE DOC TO HTML -> CANVAS -> IMAGE -> PDF PAGES
-                        setProgess(progressPercent, `Renderizando Office: ${fileObj.name}...`);
-                        
-                        const container = document.getElementById('renderContainer');
-                        container.innerHTML = ''; // Clear previous
-                        
-                        if (fileObj.type === 'word') {
-                            container.className = 'word-render';
-                            const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
-                            container.innerHTML = result.value || "<p>Documento vacío o no soportado.</p>";
-                        } else {
-                            container.className = 'excel-render';
-                            const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-                            workbook.SheetNames.forEach(sheetName => {
-                                const html = XLSX.utils.sheet_to_html(workbook.Sheets[sheetName]);
-                                container.innerHTML += `<h3>Hoja: ${sheetName}</h3>` + html + "<br/>";
-                            });
-                        }
-
-                        // Wait a tiny bit for browser to calculate styles
-                        await new Promise(r => setTimeout(r, 50)); 
-                        
-                        // Capture as Canvas
-                        const canvas = await html2canvas(container, {
-                            scale: 1.5, // Balance between quality and size
-                            useCORS: true,
-                            backgroundColor: '#ffffff'
-                        });
-                        
-                        const imgData = canvas.toDataURL('image/jpeg', 0.85);
-                        const img = await mergedPdf.embedJpg(imgData);
-                        
-                        // Calculate pagination (split long image into multiple A4 pages)
-                        const imgWidth = img.width;
-                        const imgHeight = img.height;
-                        const scale = A4_WIDTH / imgWidth;
-                        const scaledHeight = imgHeight * scale;
-                        
-                        let pageIndex = 0;
-                        while (pageIndex * A4_HEIGHT < scaledHeight) {
-                            const page = mergedPdf.addPage([A4_WIDTH, A4_HEIGHT]);
-                            // Draw image shifted up so only the relevant part shows on the page
-                            page.drawImage(img, {
-                                x: 0,
-                                y: A4_HEIGHT - scaledHeight + (pageIndex * A4_HEIGHT),
-                                width: A4_WIDTH,
-                                height: scaledHeight
-                            });
-                            addFooterToPage(page, exportNames.footer);
-                            pageIndex++;
-                        }
-                    }
-                }
-
-                setProgess(95, 'Optimizando y guardando documento final...');
-                
-                // Save and Download
-                const pdfBytes = await mergedPdf.save();
-                downloadPDF(pdfBytes, exportNames.safe);
-                
-                setProgess(100, '¡Completado!');
-                setTimeout(() => { showProgress(false); showToast('PDF generado exitosamente.', 'success'); }, 1000);
-
-            } catch (error) {
-                console.error("Error generating PDF:", error);
-                showProgress(false);
-                if (String(error.message || '').includes('cancelado')) {
-                    showToast('Proceso cancelado.', 'warning');
-                } else {
-                    showToast('Ocurrió un error al generar el PDF. Revisa la consola.', 'error');
-                }
-            } finally {
-                isProcessing = false;
-                updateActionButtonsState();
-            }
-        }
-
-        function cancelGeneration() {
-            if (!isProcessing) return;
-            isProcessing = false;
-            setProgess(0, 'Cancelando...');
-        }
-
-        function downloadPDF(pdfBytes, exportSafeName) {
-            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-            const url = URL.createObjectURL(blob);
-            
-            const filename = `documento_${exportSafeName}.pdf`;
-
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        // --- Helpers ---
-        function formatBytes(bytes, decimals = 2) {
-            if (!+bytes) return '0 Bytes';
-            const k = 1024;
-            const dm = decimals < 0 ? 0 : decimals;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
-        }
-
-        // --- UI Utilities ---
-        function showProgress(show) {
-            const overlay = document.getElementById('progressOverlay');
-            if (show) {
-                overlay.classList.remove('hidden');
-                overlay.classList.add('flex');
-            } else {
-                overlay.classList.add('hidden');
-                overlay.classList.remove('flex');
-            }
-        }
-
-        function setProgess(percent, text) {
-            document.getElementById('progressBar').style.width = `${percent}%`;
-            document.getElementById('progressText').innerText = `${percent}%`;
-            document.getElementById('progressStep').innerText = text;
-        }
-
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            
-            const colors = {
-                success: 'bg-green-600', error: 'bg-red-600', warning: 'bg-orange-500', info: 'bg-blue-600'
-            };
-            const icons = {
-                success: 'fa-check-circle', error: 'fa-triangle-exclamation', warning: 'fa-circle-exclamation', info: 'fa-circle-info'
-            };
-
-            toast.className = `${colors[type]} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 transform translate-y-10 opacity-0 transition-all duration-300`;
-            toast.innerHTML = `<i class="fa-solid ${icons[type]} text-lg"></i> <span class="text-sm font-medium">${message}</span>`;
-            
-            container.appendChild(toast);
-            
-            // Animate in
-            setTimeout(() => {
-                toast.classList.remove('translate-y-10', 'opacity-0');
-            }, 10);
-
-            // Remove after 3s
-            setTimeout(() => {
-                toast.classList.add('translate-y-10', 'opacity-0');
-                setTimeout(() => toast.remove(), 300);
-            }, 4000);
-        }
-
-        // Run Init
-        document.addEventListener('DOMContentLoaded', init);
-
-    </script>
+    function wait(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+  </script>
 </body>
 </html>
