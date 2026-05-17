@@ -277,8 +277,8 @@
             <span class="mb-2 block text-xs font-extrabold uppercase tracking-wide text-slate-500">Formato de salida</span>
             <select id="outputFormat" class="min-h-12 w-full rounded-2xl border border-slate-200 bg-white/90 px-4 text-sm font-extrabold text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100">
               <option value="pdf">PDF unificado (.pdf)</option>
-              <option value="png">PNG por página (.zip)</option>
-              <option value="jpg">JPG por página (.zip)</option>
+              <option value="png">PNG por página (.png / .zip)</option>
+              <option value="jpg">JPG por página (.jpg / .zip)</option>
             </select>
             <p id="outputFormatHint" class="mt-2 text-xs font-semibold text-slate-500">PDF genera un único documento final.</p>
           </label>
@@ -384,21 +384,23 @@
       },
       png: {
         label: 'PNG',
-        extension: 'zip',
+        extension: 'png',
+        archiveExtension: 'zip',
         imageExtension: 'png',
         mime: 'image/png',
         quality: 1,
         buttonLabel: 'Generar PNG',
-        hint: 'PNG genera un ZIP con una imagen por cada página exportada.'
+        hint: 'PNG descarga un archivo .png si solo hay 1 página; si hay varias páginas, genera un ZIP.'
       },
       jpg: {
         label: 'JPG',
-        extension: 'zip',
+        extension: 'jpg',
+        archiveExtension: 'zip',
         imageExtension: 'jpg',
         mime: 'image/jpeg',
         quality: 0.92,
         buttonLabel: 'Generar JPG',
-        hint: 'JPG genera un ZIP con una imagen comprimida por cada página exportada.'
+        hint: 'JPG descarga un archivo .jpg si solo hay 1 página; si hay varias páginas, genera un ZIP.'
       }
     };
 
@@ -750,7 +752,7 @@
         return;
       }
 
-      await generateImageZip(validItems, format);
+      await generateImageOutput(validItems, format);
     }
 
     function getValidItemsForExport() {
@@ -842,10 +844,10 @@
       }
     }
 
-    async function generateImageZip(validItems, format) {
+    async function generateImageOutput(validItems, format) {
       const config = getOutputConfig(format);
-      const zip = new JSZip();
       const baseName = buildBaseFileName();
+      const imageFiles = [];
       let pageNumber = 1;
 
       try {
@@ -863,12 +865,29 @@
           for (const canvas of pageCanvases) {
             const blob = await canvasToBlob(canvas, config.mime, config.quality);
             const pageLabel = String(pageNumber).padStart(3, '0');
-            zip.file(`${baseName}_pagina_${pageLabel}.${config.imageExtension}`, blob);
+            const filename = `${baseName}_pagina_${pageLabel}.${config.imageExtension}`;
+            imageFiles.push({ filename, blob });
             pageNumber += 1;
           }
         }
 
+        const exportedPages = imageFiles.length;
+
+        if (exportedPages === 1) {
+          setProgress(94, `Guardando imagen ${config.label}...`);
+          const singleFileName = `${baseName}.${config.imageExtension}`;
+          downloadBlob(imageFiles[0].blob, singleFileName);
+          setProgress(100, `${config.label} generado correctamente como archivo directo.`);
+          pushMessage(`${config.label} final generado: ${singleFileName} · 1 imagen.`, 'success');
+          return;
+        }
+
         setProgress(90, 'Comprimiendo imágenes en ZIP...');
+        const zip = new JSZip();
+        for (const file of imageFiles) {
+          zip.file(file.filename, file.blob);
+        }
+
         const zipBlob = await zip.generateAsync({
           type: 'blob',
           compression: 'DEFLATE',
@@ -878,12 +897,11 @@
           setProgress(zipProgress, `Comprimiendo imágenes: ${Math.round(metadata.percent || 0)}%`);
         });
 
-        const outputFileName = buildFileName();
+        const outputFileName = `${baseName}.${config.archiveExtension || 'zip'}`;
         downloadBlob(zipBlob, outputFileName);
 
-        const exportedPages = pageNumber - 1;
-        setProgress(100, `${config.label} generado correctamente con ${exportedPages} ${exportedPages === 1 ? 'imagen' : 'imágenes'}.`);
-        pushMessage(`${config.label} final generado: ${outputFileName} · ${exportedPages} imagen(es).`, 'success');
+        setProgress(100, `${config.label} generado correctamente con ${exportedPages} imágenes en ZIP.`);
+        pushMessage(`${config.label} final generado: ${outputFileName} · ${exportedPages} imágenes.`, 'success');
       } catch (error) {
         console.error(error);
         setProgress(0, `No se pudo generar la exportación ${config.label}.`);
@@ -1234,7 +1252,7 @@
     function updateExportUi() {
       const config = getOutputConfig();
       els.outputFormatHint.textContent = config.hint;
-      els.fileExtensionBadge.textContent = `.${config.extension}`;
+      els.fileExtensionBadge.textContent = extensionBadgeText(config);
       els.generateBtnLabel.textContent = config.buttonLabel;
       updateFileNamePreview();
     }
@@ -1243,13 +1261,20 @@
       const fileName = buildFileName();
       els.fileNamePreview.textContent = defaultFileName();
       els.customFileNamePreview.textContent = fileName;
-      if (els.fileExtensionBadge) els.fileExtensionBadge.textContent = `.${getOutputConfig().extension}`;
+      if (els.fileExtensionBadge) els.fileExtensionBadge.textContent = extensionBadgeText(getOutputConfig());
       if (els.generateBtnLabel) els.generateBtnLabel.textContent = getOutputConfig().buttonLabel;
       if (els.outputFormatHint) els.outputFormatHint.textContent = getOutputConfig().hint;
     }
 
     function buildFileName() {
-      return `${buildBaseFileName()}.${getOutputConfig().extension}`;
+      const config = getOutputConfig();
+      if (config.archiveExtension) return `${buildBaseFileName()}.${config.imageExtension} / .${config.archiveExtension}`;
+      return `${buildBaseFileName()}.${config.extension}`;
+    }
+
+    function extensionBadgeText(config) {
+      if (config.archiveExtension) return `.${config.imageExtension} / .${config.archiveExtension}`;
+      return `.${config.extension}`;
     }
 
     function buildBaseFileName() {
