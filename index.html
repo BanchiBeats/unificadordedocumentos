@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -31,6 +33,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
   <style>
     :root {
@@ -195,7 +198,7 @@
           Unificador de <span class="gradient-text">Documentos</span>
         </h1>
         <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">
-          Convierte imágenes, PDF, Excel y Word DOCX a páginas internas y genera un único PDF final respetando el orden elegido.
+          Convierte imágenes, PDF, Excel y Word DOCX a páginas internas y exporta el resultado en el formato que elijas respetando el orden seleccionado.
         </p>
       </section>
 
@@ -253,7 +256,7 @@
               <h2 class="font-jakarta text-xl font-extrabold text-slate-900">Vista previa y orden</h2>
               <p class="text-sm text-slate-500">Arrastra las tarjetas o usa los botones para mover cada archivo.</p>
             </div>
-            <span id="orderHint" class="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700">Orden final del PDF</span>
+            <span id="orderHint" class="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700">Orden final de exportación</span>
           </div>
 
           <div id="emptyState" class="rounded-3xl border border-dashed border-slate-200 bg-white/55 p-8 text-center">
@@ -269,14 +272,24 @@
         <section class="glass-strong rounded-[2rem] p-5 sm:p-6">
           <h2 class="font-jakarta text-xl font-extrabold text-slate-900">Exportación</h2>
           <p class="mt-2 text-sm leading-6 text-slate-600">
-            Puedes personalizar el nombre del archivo final. Si lo dejas vacío, se usará automáticamente <strong id="fileNamePreview">caso_dd_mm_aaaa.pdf</strong>.
+            Puedes elegir el formato de salida y personalizar el nombre del archivo final. Si lo dejas vacío, se usará automáticamente <strong id="fileNamePreview">caso_dd_mm_aaaa.pdf</strong>.
           </p>
 
           <label class="mt-5 block rounded-3xl bg-white/72 p-4 shadow-sm">
-            <span class="mb-2 block text-xs font-extrabold uppercase tracking-wide text-slate-500">Nombre del archivo PDF</span>
+            <span class="mb-2 block text-xs font-extrabold uppercase tracking-wide text-slate-500">Formato de salida</span>
+            <select id="outputFormat" class="min-h-12 w-full rounded-2xl border border-slate-200 bg-white/90 px-4 text-sm font-extrabold text-slate-800 outline-none transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100">
+              <option value="pdf">PDF unificado (.pdf)</option>
+              <option value="png">PNG por página (.zip)</option>
+              <option value="jpg">JPG por página (.zip)</option>
+            </select>
+            <p id="outputFormatHint" class="mt-2 text-xs font-semibold text-slate-500">PDF genera un único documento final.</p>
+          </label>
+
+          <label class="mt-4 block rounded-3xl bg-white/72 p-4 shadow-sm">
+            <span class="mb-2 block text-xs font-extrabold uppercase tracking-wide text-slate-500">Nombre base del archivo</span>
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
               <input id="customFileName" type="text" placeholder="Ejemplo: expediente_cliente_juan" class="min-h-12 flex-1 rounded-2xl border border-slate-200 bg-white/90 px-4 text-sm font-bold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100" />
-              <span class="rounded-2xl bg-indigo-50 px-4 py-3 text-sm font-extrabold text-indigo-700">.pdf</span>
+              <span id="fileExtensionBadge" class="rounded-2xl bg-indigo-50 px-4 py-3 text-sm font-extrabold text-indigo-700">.pdf</span>
             </div>
             <p class="mt-2 text-xs font-semibold text-slate-500">Vista previa: <strong id="customFileNamePreview">caso_dd_mm_aaaa.pdf</strong></p>
           </label>
@@ -293,7 +306,7 @@
           </div>
 
           <button id="generateBtn" type="button" class="mt-5 flex w-full items-center justify-center gap-2 rounded-3xl bg-gradient-to-r from-indigo-600 to-sky-500 px-5 py-4 text-base font-extrabold text-white shadow-2xl shadow-indigo-300/40 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50">
-            <span>Generar PDF</span>
+            <span id="generateBtnLabel">Generar PDF</span>
             <span>→</span>
           </button>
 
@@ -306,10 +319,10 @@
           <h2 class="font-jakarta text-lg font-extrabold text-slate-900">Reglas aplicadas</h2>
           <ul class="mt-4 space-y-3 text-sm text-slate-600">
             <li class="flex gap-3"><span class="font-bold text-indigo-600">01</span><span>Las imágenes se comprimen y se ajustan a una hoja A4.</span></li>
-            <li class="flex gap-3"><span class="font-bold text-indigo-600">02</span><span>Los PDF se copian directamente para conservar calidad.</span></li>
+            <li class="flex gap-3"><span class="font-bold text-indigo-600">02</span><span>Los PDF se copian directamente al exportar en PDF y se rasterizan al exportar imágenes.</span></li>
             <li class="flex gap-3"><span class="font-bold text-indigo-600">03</span><span>Excel se renderiza como tabla por hoja.</span></li>
             <li class="flex gap-3"><span class="font-bold text-indigo-600">04</span><span>Word DOCX se renderiza como páginas visuales.</span></li>
-            <li class="flex gap-3"><span class="font-bold text-indigo-600">05</span><span>La rotación se aplica antes de exportar.</span></li>
+            <li class="flex gap-3"><span class="font-bold text-indigo-600">05</span><span>La rotación se aplica antes de exportar en PDF, PNG o JPG.</span></li>
           </ul>
         </section>
 
@@ -364,6 +377,33 @@
     const JPEG_QUALITY = 0.76;
     const MAX_CANVAS_SIDE = 1900;
 
+    const OUTPUT_FORMATS = {
+      pdf: {
+        label: 'PDF',
+        extension: 'pdf',
+        buttonLabel: 'Generar PDF',
+        hint: 'PDF genera un único documento final.'
+      },
+      png: {
+        label: 'PNG',
+        extension: 'zip',
+        imageExtension: 'png',
+        mime: 'image/png',
+        quality: 1,
+        buttonLabel: 'Generar PNG',
+        hint: 'PNG genera un ZIP con una imagen por cada página exportada.'
+      },
+      jpg: {
+        label: 'JPG',
+        extension: 'zip',
+        imageExtension: 'jpg',
+        mime: 'image/jpeg',
+        quality: 0.92,
+        buttonLabel: 'Generar JPG',
+        hint: 'JPG genera un ZIP con una imagen comprimida por cada página exportada.'
+      }
+    };
+
     const state = {
       items: [],
       busy: false
@@ -387,6 +427,10 @@
       fileNamePreview: document.getElementById('fileNamePreview'),
       customFileName: document.getElementById('customFileName'),
       customFileNamePreview: document.getElementById('customFileNamePreview'),
+      outputFormat: document.getElementById('outputFormat'),
+      outputFormatHint: document.getElementById('outputFormatHint'),
+      fileExtensionBadge: document.getElementById('fileExtensionBadge'),
+      generateBtnLabel: document.getElementById('generateBtnLabel'),
       messages: document.getElementById('messages'),
       renderStage: document.getElementById('renderStage'),
       cardTemplate: document.getElementById('cardTemplate')
@@ -465,8 +509,9 @@
         }
       });
 
-      els.generateBtn.addEventListener('click', generateMergedPdf);
+      els.generateBtn.addEventListener('click', generateOutput);
       els.customFileName.addEventListener('input', updateFileNamePreview);
+      els.outputFormat.addEventListener('change', updateExportUi);
     }
 
     function addFiles(files) {
@@ -695,27 +740,44 @@
       render();
     }
 
-    async function generateMergedPdf() {
+    async function generateOutput() {
       if (!state.items.length || state.busy) return;
 
+      const validItems = getValidItemsForExport();
+      if (!validItems) return;
+
+      const format = getSelectedOutputFormat();
+      if (format === 'pdf') {
+        await generateMergedPdf(validItems);
+        return;
+      }
+
+      await generateImageZip(validItems, format);
+    }
+
+    function getValidItemsForExport() {
       const processing = state.items.some(item => item.status === 'processing');
       if (processing) {
         pushMessage('Aún hay archivos procesándose. Espera a que todos estén listos.', 'warning');
-        return;
+        return null;
       }
 
       const errored = state.items.filter(item => item.status === 'error');
       if (errored.length) {
-        const proceed = confirm(`Hay ${errored.length} archivo(s) con error. ¿Deseas generar el PDF omitiéndolos?`);
-        if (!proceed) return;
+        const proceed = confirm(`Hay ${errored.length} archivo(s) con error. ¿Deseas exportar omitiéndolos?`);
+        if (!proceed) return null;
       }
 
       const validItems = state.items.filter(item => item.status === 'ready');
       if (!validItems.length) {
-        pushMessage('No hay archivos válidos para generar el PDF.', 'error');
-        return;
+        pushMessage('No hay archivos válidos para exportar.', 'error');
+        return null;
       }
 
+      return validItems;
+    }
+
+    async function generateMergedPdf(validItems) {
       try {
         state.busy = true;
         els.generateBtn.disabled = true;
@@ -780,6 +842,160 @@
         state.busy = false;
         render();
       }
+    }
+
+    async function generateImageZip(validItems, format) {
+      const config = getOutputConfig(format);
+      const zip = new JSZip();
+      const baseName = buildBaseFileName();
+      let pageNumber = 1;
+
+      try {
+        state.busy = true;
+        els.generateBtn.disabled = true;
+        clearMessages();
+        setProgress(2, `Preparando exportación ${config.label}...`);
+
+        for (let index = 0; index < validItems.length; index++) {
+          const item = validItems[index];
+          const baseProgress = Math.round((index / validItems.length) * 82) + 3;
+          setProgress(baseProgress, `Renderizando ${index + 1}/${validItems.length}: ${item.name}`);
+
+          const pageCanvases = await buildExportCanvasesForItem(item);
+          for (const canvas of pageCanvases) {
+            const blob = await canvasToBlob(canvas, config.mime, config.quality);
+            const pageLabel = String(pageNumber).padStart(3, '0');
+            zip.file(`${baseName}_pagina_${pageLabel}.${config.imageExtension}`, blob);
+            pageNumber += 1;
+          }
+        }
+
+        setProgress(90, 'Comprimiendo imágenes en ZIP...');
+        const zipBlob = await zip.generateAsync({
+          type: 'blob',
+          compression: 'DEFLATE',
+          compressionOptions: { level: 6 }
+        }, metadata => {
+          const zipProgress = 90 + Math.round((metadata.percent || 0) * 0.09);
+          setProgress(zipProgress, `Comprimiendo imágenes: ${Math.round(metadata.percent || 0)}%`);
+        });
+
+        const outputFileName = buildFileName();
+        downloadBlob(zipBlob, outputFileName);
+
+        const exportedPages = pageNumber - 1;
+        setProgress(100, `${config.label} generado correctamente con ${exportedPages} ${exportedPages === 1 ? 'imagen' : 'imágenes'}.`);
+        pushMessage(`${config.label} final generado: ${outputFileName} · ${exportedPages} imagen(es).`, 'success');
+      } catch (error) {
+        console.error(error);
+        setProgress(0, `No se pudo generar la exportación ${config.label}.`);
+        pushMessage(normalizeExportError(error), 'error');
+      } finally {
+        state.busy = false;
+        render();
+      }
+    }
+
+    async function buildExportCanvasesForItem(item) {
+      if (item.kind === 'image') {
+        const canvas = await imageFileToCanvas(item.file);
+        return [await canvasToA4Page(canvas, item.rotation)];
+      }
+
+      if (item.kind === 'pdf') {
+        return await pdfFileToA4Canvases(item.file, item.rotation);
+      }
+
+      if (item.kind === 'excel') {
+        const pages = [];
+        for (const sheetName of item.sheetNames) {
+          const html = buildExcelHtml(item, sheetName, false);
+          const canvas = await htmlToCanvas(html);
+          const slices = await longCanvasToA4Canvases(canvas, item.rotation);
+          pages.push(...slices);
+        }
+        return pages;
+      }
+
+      if (item.kind === 'word') {
+        const html = buildWordHtml(item, false);
+        const canvas = await htmlToCanvas(html);
+        return await longCanvasToA4Canvases(canvas, item.rotation);
+      }
+
+      return [];
+    }
+
+    async function pdfFileToA4Canvases(file, rotation = 0) {
+      const buffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer.slice(0)) }).promise;
+      const pages = [];
+
+      try {
+        for (let pageIndex = 1; pageIndex <= pdf.numPages; pageIndex++) {
+          const page = await pdf.getPage(pageIndex);
+          const viewport = page.getViewport({ scale: 2 });
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d', { alpha: false });
+          canvas.width = Math.ceil(viewport.width);
+          canvas.height = Math.ceil(viewport.height);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          await page.render({ canvasContext: ctx, viewport }).promise;
+          pages.push(await canvasToA4Page(canvas, rotation));
+        }
+      } finally {
+        await pdf.destroy();
+      }
+
+      return pages;
+    }
+
+    async function longCanvasToA4Canvases(sourceCanvas, rotation = 0) {
+      const pageHeightPx = Math.floor(sourceCanvas.width * (A4_HEIGHT / A4_WIDTH));
+      const totalSlices = Math.max(1, Math.ceil(sourceCanvas.height / pageHeightPx));
+      const pages = [];
+
+      for (let sliceIndex = 0; sliceIndex < totalSlices; sliceIndex++) {
+        const sy = sliceIndex * pageHeightPx;
+        const sh = Math.min(pageHeightPx, sourceCanvas.height - sy);
+        const sliceCanvas = document.createElement('canvas');
+        sliceCanvas.width = sourceCanvas.width;
+        sliceCanvas.height = sh;
+        const ctx = sliceCanvas.getContext('2d', { alpha: false });
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+        ctx.drawImage(sourceCanvas, 0, sy, sourceCanvas.width, sh, 0, 0, sourceCanvas.width, sh);
+        pages.push(await canvasToA4Page(sliceCanvas, rotation));
+      }
+
+      return pages;
+    }
+
+    async function canvasToA4Page(sourceCanvas, rotation = 0) {
+      const rotatedCanvas = await rotateCanvasIfNeeded(sourceCanvas, rotation);
+      const optimizedCanvas = limitCanvasSize(rotatedCanvas, MAX_CANVAS_SIDE);
+      const pageCanvas = document.createElement('canvas');
+      pageCanvas.width = RENDER_WIDTH;
+      pageCanvas.height = RENDER_HEIGHT;
+
+      const ctx = pageCanvas.getContext('2d', { alpha: false });
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+
+      const margin = 32;
+      const availableWidth = pageCanvas.width - margin * 2;
+      const availableHeight = pageCanvas.height - margin * 2;
+      const ratio = Math.min(availableWidth / optimizedCanvas.width, availableHeight / optimizedCanvas.height);
+      const width = Math.round(optimizedCanvas.width * ratio);
+      const height = Math.round(optimizedCanvas.height * ratio);
+      const x = Math.round((pageCanvas.width - width) / 2);
+      const y = Math.round((pageCanvas.height - height) / 2);
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(optimizedCanvas, x, y, width, height);
+      return pageCanvas;
     }
 
     async function addSingleCanvasPage(pdfDoc, sourceCanvas, rotation = 0) {
@@ -970,11 +1186,15 @@
     }
 
     function canvasToJpegBytes(canvas, quality) {
+      return canvasToBlob(canvas, 'image/jpeg', quality).then(blob => blob.arrayBuffer());
+    }
+
+    function canvasToBlob(canvas, type = 'image/png', quality = 0.92) {
       return new Promise((resolve, reject) => {
         canvas.toBlob(blob => {
           if (!blob) return reject(new Error('No se pudo comprimir la página.'));
-          blob.arrayBuffer().then(resolve).catch(reject);
-        }, 'image/jpeg', quality);
+          resolve(blob);
+        }, type, quality);
       });
     }
 
@@ -1013,34 +1233,60 @@
       els.messages.innerHTML = '';
     }
 
+    function updateExportUi() {
+      const config = getOutputConfig();
+      els.outputFormatHint.textContent = config.hint;
+      els.fileExtensionBadge.textContent = `.${config.extension}`;
+      els.generateBtnLabel.textContent = config.buttonLabel;
+      updateFileNamePreview();
+    }
+
     function updateFileNamePreview() {
       const fileName = buildFileName();
       els.fileNamePreview.textContent = defaultFileName();
       els.customFileNamePreview.textContent = fileName;
+      if (els.fileExtensionBadge) els.fileExtensionBadge.textContent = `.${getOutputConfig().extension}`;
+      if (els.generateBtnLabel) els.generateBtnLabel.textContent = getOutputConfig().buttonLabel;
+      if (els.outputFormatHint) els.outputFormatHint.textContent = getOutputConfig().hint;
     }
 
     function buildFileName() {
+      return `${buildBaseFileName()}.${getOutputConfig().extension}`;
+    }
+
+    function buildBaseFileName() {
       const customName = sanitizeFileName(els.customFileName?.value || '');
-      const defaultName = defaultFileName().slice(0, -4);
-      return `${customName || defaultName}.pdf`;
+      return customName || defaultBaseFileName();
     }
 
     function defaultFileName() {
+      return `${defaultBaseFileName()}.${getOutputConfig().extension}`;
+    }
+
+    function defaultBaseFileName() {
       const date = new Date();
       const dd = String(date.getDate()).padStart(2, '0');
       const mm = String(date.getMonth() + 1).padStart(2, '0');
       const yyyy = date.getFullYear();
-      return `caso_${dd}_${mm}_${yyyy}.pdf`;
+      return `caso_${dd}_${mm}_${yyyy}`;
+    }
+
+    function getSelectedOutputFormat() {
+      return els.outputFormat?.value || 'pdf';
+    }
+
+    function getOutputConfig(format = getSelectedOutputFormat()) {
+      return OUTPUT_FORMATS[format] || OUTPUT_FORMATS.pdf;
     }
 
     function sanitizeFileName(value) {
       const forbiddenChars = new Set([String.fromCharCode(92), '/', ':', '*', '?', '"', '<', '>', '|']);
       const raw = String(value).trim();
-      const withoutPdf = raw.toLowerCase().endsWith('.pdf') ? raw.slice(0, -4) : raw;
+      const withoutKnownExtension = raw.replace(/\.(pdf|zip|png|jpg|jpeg)$/i, '');
       let clean = '';
       let previousWasUnderscore = false;
 
-      for (const char of withoutPdf) {
+      for (const char of withoutKnownExtension) {
         const nextChar = forbiddenChars.has(char) || char.trim() === '' ? '_' : char;
         if (nextChar === '_' && previousWasUnderscore) continue;
         clean += nextChar;
